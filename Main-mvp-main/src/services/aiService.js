@@ -91,7 +91,7 @@ const getAiRecommendations = async (userData, courseCatalog, jobListings) => {
       category: j.category,
       level: j.level,
       workType: j.workType
-    })))}
+    })))}n
     ---
 
     INSTRUCTIONS:
