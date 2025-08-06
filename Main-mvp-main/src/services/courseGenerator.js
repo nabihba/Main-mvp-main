@@ -395,11 +395,50 @@ export const getCoursesByCategory = (category) => {
 export const searchCourses = (searchTerm) => {
   const allCourses = generateCourseCatalog();
   const searchLower = searchTerm.toLowerCase();
+  const searchWords = searchTerm.toLowerCase().split(' ').filter(word => word.length > 2);
   
-  return allCourses.filter(course => 
-    course.title.toLowerCase().includes(searchLower) ||
-    course.description.toLowerCase().includes(searchLower) ||
-    course.skillsString.toLowerCase().includes(searchLower) ||
-    course.provider.toLowerCase().includes(searchLower)
-  );
+  // Score-based relevance search
+  const scoredCourses = allCourses.map(course => {
+    let score = 0;
+    
+    // Exact title match gets highest score
+    if (course.title.toLowerCase().includes(searchLower)) {
+      score += 100;
+    }
+    
+    // Category/subject match
+    if (course.category && course.category.toLowerCase().includes(searchLower)) {
+      score += 80;
+    }
+    
+    // Skills match
+    if (course.skillsString && course.skillsString.toLowerCase().includes(searchLower)) {
+      score += 60;
+    }
+    
+    // Description match
+    if (course.description.toLowerCase().includes(searchLower)) {
+      score += 40;
+    }
+    
+    // Provider match
+    if (course.provider.toLowerCase().includes(searchLower)) {
+      score += 20;
+    }
+    
+    // Individual word matches
+    searchWords.forEach(word => {
+      if (course.title.toLowerCase().includes(word)) score += 30;
+      if (course.skillsString && course.skillsString.toLowerCase().includes(word)) score += 20;
+      if (course.description.toLowerCase().includes(word)) score += 10;
+    });
+    
+    return { ...course, relevanceScore: score };
+  });
+  
+  // Filter courses with score > 0 and sort by relevance
+  return scoredCourses
+    .filter(course => course.relevanceScore > 0)
+    .sort((a, b) => b.relevanceScore - a.relevanceScore)
+    .map(({ relevanceScore, ...course }) => course); // Remove score from final result
 }; 
