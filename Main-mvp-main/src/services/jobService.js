@@ -1,57 +1,475 @@
-import { generateJobCatalog, searchJobs } from './jobGenerator';
+// jobService.js - Service for fetching real job data from multiple APIs
+
+// API Configuration
+const API_CONFIG = {
+  // RapidAPI Job Search APIs
+  JOBS_API: {
+    baseUrl: 'https://jobs-api14.p.rapidapi.com',
+    headers: {
+      'X-RapidAPI-Key': process.env.REACT_APP_RAPIDAPI_KEY,
+      'X-RapidAPI-Host': 'jobs-api14.p.rapidapi.com'
+    }
+  },
+  
+  // Indeed API via RapidAPI
+  INDEED_API: {
+    baseUrl: 'https://indeed12.p.rapidapi.com',
+    headers: {
+      'X-RapidAPI-Key': process.env.REACT_APP_RAPIDAPI_KEY,
+      'X-RapidAPI-Host': 'indeed12.p.rapidapi.com'
+    }
+  },
+
+  // LinkedIn Jobs via RapidAPI
+  LINKEDIN_API: {
+    baseUrl: 'https://linkedin-jobs-search.p.rapidapi.com',
+    headers: {
+      'X-RapidAPI-Key': process.env.REACT_APP_RAPIDAPI_KEY,
+      'X-RapidAPI-Host': 'linkedin-jobs-search.p.rapidapi.com'
+    }
+  },
+
+  // GitHub Jobs (Free)
+  GITHUB_JOBS: {
+    baseUrl: 'https://jobs.github.com/positions.json',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  }
+};
+
+// Fallback job generator for when APIs fail
+const generateJobCatalog = (searchKeywords = '') => {
+  const jobTemplates = [
+    {
+      titleTemplates: ['Frontend Developer', 'React Developer', 'UI/UX Developer', 'Web Developer'],
+      companies: ['Microsoft', 'Google', 'Meta', 'Apple', 'Amazon', 'Netflix', 'Spotify', 'Airbnb'],
+      categories: ['Software Engineering', 'Web Development', 'Frontend'],
+      skills: ['JavaScript', 'React', 'HTML', 'CSS', 'TypeScript', 'Node.js'],
+      locations: ['Remote', 'New York', 'San Francisco', 'London', 'Berlin', 'Tel Aviv'],
+      workTypes: ['Full-time', 'Part-time', 'Contract', 'Remote']
+    },
+    {
+      titleTemplates: ['Backend Developer', 'Full Stack Developer', 'Software Engineer', 'Node.js Developer'],
+      companies: ['Uber', 'Slack', 'Dropbox', 'Salesforce', 'Oracle', 'IBM', 'Adobe', 'Zoom'],
+      categories: ['Software Engineering', 'Backend Development', 'Full Stack'],
+      skills: ['Node.js', 'Python', 'Java', 'MongoDB', 'PostgreSQL', 'AWS'],
+      locations: ['Remote', 'Seattle', 'Austin', 'Toronto', 'Amsterdam', 'Dublin'],
+      workTypes: ['Full-time', 'Contract', 'Remote']
+    },
+    {
+      titleTemplates: ['Data Scientist', 'Data Analyst', 'Machine Learning Engineer', 'AI Engineer'],
+      companies: ['Tesla', 'OpenAI', 'DeepMind', 'Palantir', 'Snowflake', 'DataBricks'],
+      categories: ['Data Science', 'Machine Learning', 'Analytics'],
+      skills: ['Python', 'R', 'SQL', 'TensorFlow', 'PyTorch', 'Pandas'],
+      locations: ['Remote', 'Palo Alto', 'Boston', 'Chicago', 'Montreal', 'Singapore'],
+      workTypes: ['Full-time', 'Remote', 'Contract']
+    },
+    {
+      titleTemplates: ['DevOps Engineer', 'Cloud Engineer', 'Site Reliability Engineer', 'Platform Engineer'],
+      companies: ['AWS', 'Google Cloud', 'Microsoft Azure', 'HashiCorp', 'Docker', 'Kubernetes'],
+      categories: ['DevOps', 'Cloud Computing', 'Infrastructure'],
+      skills: ['Docker', 'Kubernetes', 'AWS', 'Terraform', 'Jenkins', 'Linux'],
+      locations: ['Remote', 'Dublin', 'Frankfurt', 'Sydney', 'Tokyo', 'São Paulo'],
+      workTypes: ['Full-time', 'Remote']
+    },
+    {
+      titleTemplates: ['Mobile Developer', 'iOS Developer', 'Android Developer', 'React Native Developer'],
+      companies: ['Snapchat', 'TikTok', 'Instagram', 'WhatsApp', 'Telegram', 'Discord'],
+      categories: ['Mobile Development', 'iOS', 'Android'],
+      skills: ['Swift', 'Kotlin', 'React Native', 'Flutter', 'iOS', 'Android'],
+      locations: ['Remote', 'Los Angeles', 'Miami', 'Vancouver', 'Stockholm', 'Copenhagen'],
+      workTypes: ['Full-time', 'Contract', 'Remote']
+    }
+  ];
+
+  const jobs = [];
+  const searchLower = searchKeywords.toLowerCase();
+
+  jobTemplates.forEach((template, templateIndex) => {
+    // Filter templates based on search keywords
+    const isRelevant = !searchKeywords || 
+      template.titleTemplates.some(title => title.toLowerCase().includes(searchLower)) ||
+      template.categories.some(cat => cat.toLowerCase().includes(searchLower)) ||
+      template.skills.some(skill => skill.toLowerCase().includes(searchLower));
+
+    if (isRelevant) {
+      template.titleTemplates.forEach((titleTemplate, titleIndex) => {
+        template.companies.forEach((company, companyIndex) => {
+          const job = {
+            id: `generated_${templateIndex}_${titleIndex}_${companyIndex}`,
+            title: titleTemplate,
+            company: company,
+            location: template.locations[Math.floor(Math.random() * template.locations.length)],
+            workType: template.workTypes[Math.floor(Math.random() * template.workTypes.length)],
+            category: template.categories[Math.floor(Math.random() * template.categories.length)],
+            description: `We are looking for a talented ${titleTemplate} to join our ${company} team. You will be working on cutting-edge projects and collaborating with a world-class team.`,
+            requirements: template.skills.slice(0, 4),
+            skills: template.skills,
+            salary: `$${(Math.floor(Math.random() * 100) + 50)}k - $${(Math.floor(Math.random() * 150) + 100)}k`,
+            postedDate: new Date(Date.now() - Math.floor(Math.random() * 7) * 24 * 60 * 60 * 1000).toISOString(),
+            image: `https://logo.clearbit.com/${company.toLowerCase().replace(/\s+/g, '')}.com`,
+            url: `https://careers.${company.toLowerCase().replace(/\s+/g, '')}.com`,
+            isRemote: template.workTypes.includes('Remote'),
+            experienceLevel: ['Entry Level', 'Mid Level', 'Senior Level'][Math.floor(Math.random() * 3)],
+            department: template.categories[0]
+          };
+          jobs.push(job);
+        });
+      });
+    }
+  });
+
+  return jobs.slice(0, 50); // Limit results
+};
 
 /**
- * Searches for jobs using the Jsearch API with fallback to generated jobs.
- * @param {string} searchKeywords - The job title or keywords to search for.
- * @returns {Promise<Array>} - A promise that resolves with a list of job objects.
+ * Fetch jobs from Indeed via RapidAPI
  */
-export const fetchJobs = async (searchKeywords) => {
-  console.log(`Job Service: Searching for jobs related to "${searchKeywords}"...`);
-  
+const fetchIndeedJobs = async (searchKeywords, limit = 20) => {
   try {
-    // Try to get jobs from the API first
-    const JSEARCH_API_KEY = 'ce730dd6c4mshfc23865116522b3p13e9bbjsn7f26457d877f';
-    const JSEARCH_API_HOST = 'jsearch.p.rapidapi.com';
+    console.log('Fetching Indeed jobs...');
     
-    const apiUrl = `https://jsearch.p.rapidapi.com/search?query=${encodeURIComponent(searchKeywords)}&location=AE,SA,QA,KW,OM,BH`;
-
-    const options = {
-      method: 'GET',
+    const response = await fetch(`${API_CONFIG.INDEED_API.baseUrl}/jobs/search`, {
+      method: 'POST',
       headers: {
-        'X-RapidAPI-Key': JSEARCH_API_KEY,
-        'X-RapidAPI-Host': JSEARCH_API_HOST
-      }
-    };
+        ...API_CONFIG.INDEED_API.headers,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        query: searchKeywords,
+        location: 'Remote',
+        page_id: '1',
+        locality: 'us'
+      })
+    });
 
-    const response = await fetch(apiUrl, options);
-    if (response.ok) {
-      const data = await response.json();
-
-      if (data.data && Array.isArray(data.data)) {
-        // Clean up the job data into a format our app can use
-        const jobs = data.data.map(job => ({
-          id: job.job_id,
-          title: job.job_title,
-          company: job.employer_name,
-          location: job.job_city ? `${job.job_city}, ${job.job_country}` : job.job_country,
-          description: job.job_description,
-          image: job.employer_logo,
-          job_url: job.job_apply_link,
-        }));
-
-        console.log(`Found ${jobs.length} jobs from API`);
-        console.log('Sample job:', jobs[0]);
-        return jobs;
-      }
+    if (!response.ok) {
+      throw new Error(`Indeed API error: ${response.status}`);
     }
+
+    const data = await response.json();
+    
+    return data.jobs?.map(job => ({
+      id: `indeed_${job.job_id}`,
+      title: job.job_title,
+      company: job.company_name,
+      location: job.job_location,
+      workType: job.job_employment_type || 'Full-time',
+      category: job.job_category || 'General',
+      description: job.job_description,
+      requirements: job.job_required_skills || [],
+      skills: job.job_required_skills || [],
+      salary: job.job_salary,
+      postedDate: job.job_posted_date,
+      url: job.job_apply_link,
+      image: job.company_logo || `https://source.unsplash.com/400x400/?company,${job.company_name}`,
+      isRemote: job.job_is_remote,
+      experienceLevel: job.job_experience_required,
+      department: job.job_category
+    })) || [];
+
   } catch (error) {
-    console.error("Failed to fetch from Jsearch API:", error);
+    console.error('Error fetching Indeed jobs:', error);
+    return [];
+  }
+};
+
+/**
+ * Fetch jobs from LinkedIn via RapidAPI
+ */
+const fetchLinkedInJobs = async (searchKeywords, limit = 20) => {
+  try {
+    console.log('Fetching LinkedIn jobs...');
+    
+    const response = await fetch(`${API_CONFIG.LINKEDIN_API.baseUrl}/jobs`, {
+      method: 'POST',
+      headers: {
+        ...API_CONFIG.LINKEDIN_API.headers,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        query: searchKeywords,
+        location: 'Worldwide',
+        dateSincePosted: 'past24Hours',
+        jobType: 'full-time',
+        remoteFilter: 'all',
+        salary: '',
+        experienceLevel: 'all',
+        limit: limit
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`LinkedIn API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    return data.data?.map(job => ({
+      id: `linkedin_${job.jobId}`,
+      title: job.title,
+      company: job.company,
+      location: job.location,
+      workType: job.type || 'Full-time',
+      category: job.industries?.[0] || 'General',
+      description: job.description,
+      requirements: job.skills || [],
+      skills: job.skills || [],
+      salary: job.salary,
+      postedDate: job.postDate,
+      url: job.jobUrl,
+      image: job.companyLogo || `https://source.unsplash.com/400x400/?company,${job.company}`,
+      isRemote: job.location?.toLowerCase().includes('remote'),
+      experienceLevel: job.experienceLevel,
+      department: job.function
+    })) || [];
+
+  } catch (error) {
+    console.error('Error fetching LinkedIn jobs:', error);
+    return [];
+  }
+};
+
+/**
+ * Fetch jobs from GitHub Jobs (Free but limited)
+ */
+const fetchGitHubJobs = async (searchKeywords, limit = 20) => {
+  try {
+    console.log('Fetching GitHub jobs...');
+    
+    const params = new URLSearchParams({
+      description: searchKeywords,
+      location: 'remote',
+      full_time: 'true'
+    });
+
+    const response = await fetch(`${API_CONFIG.GITHUB_JOBS.baseUrl}?${params}`, {
+      headers: API_CONFIG.GITHUB_JOBS.headers
+    });
+
+    if (!response.ok) {
+      throw new Error(`GitHub Jobs API error: ${response.status}`);
+    }
+
+    const jobs = await response.json();
+    
+    return jobs.slice(0, limit).map(job => ({
+      id: `github_${job.id}`,
+      title: job.title,
+      company: job.company,
+      location: job.location,
+      workType: job.type || 'Full-time',
+      category: 'Software Engineering',
+      description: job.description,
+      requirements: [],
+      skills: [],
+      salary: null,
+      postedDate: job.created_at,
+      url: job.url,
+      image: job.company_logo || `https://source.unsplash.com/400x400/?company,${job.company}`,
+      isRemote: job.location?.toLowerCase().includes('remote'),
+      experienceLevel: 'Mid Level',
+      department: 'Engineering'
+    }));
+
+  } catch (error) {
+    console.error('Error fetching GitHub jobs:', error);
+    return [];
+  }
+};
+
+/**
+ * Fetch jobs from general Jobs API
+ */
+const fetchGeneralJobs = async (searchKeywords, limit = 20) => {
+  try {
+    console.log('Fetching general jobs...');
+    
+    const response = await fetch(`${API_CONFIG.JOBS_API.baseUrl}/job/search`, {
+      method: 'POST',
+      headers: {
+        ...API_CONFIG.JOBS_API.headers,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        query: searchKeywords,
+        location: 'Remote',
+        autoTranslateLocation: false,
+        remoteOnly: false,
+        employmentTypes: 'fulltime;parttime;contractor',
+        index: 0
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Jobs API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    return data.jobs?.slice(0, limit).map(job => ({
+      id: `jobsapi_${job.jobId}`,
+      title: job.title,
+      company: job.company,
+      location: job.location,
+      workType: job.jobType || 'Full-time',
+      category: job.jobFamily || 'General',
+      description: job.description,
+      requirements: job.requiredSkills || [],
+      skills: job.requiredSkills || [],
+      salary: job.estimatedSalary,
+      postedDate: job.datePosted,
+      url: job.jobProviders?.[0]?.url,
+      image: job.companyLogo || `https://source.unsplash.com/400x400/?company,${job.company}`,
+      isRemote: job.isRemote,
+      experienceLevel: job.seniorityLevel,
+      department: job.jobFamily
+    })) || [];
+
+  } catch (error) {
+    console.error('Error fetching general jobs:', error);
+    return [];
+  }
+};
+
+/**
+ * Remove duplicate jobs based on title and company similarity
+ */
+const removeDuplicateJobs = (jobs) => {
+  const seen = new Map();
+  return jobs.filter(job => {
+    const key = `${job.title.toLowerCase()}_${job.company.toLowerCase()}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key, true);
+    return true;
+  });
+};
+
+/**
+ * Main job fetching function with multiple API sources
+ * @param {string} searchKeywords - The keywords to search for
+ * @param {Object} options - Fetch options
+ * @returns {Promise<Array>} - Combined job results
+ */
+export const fetchJobs = async (searchKeywords, options = {}) => {
+  const {
+    useRealAPIs = true,
+    sources = ['indeed', 'linkedin', 'general'], // Available sources
+    maxPerSource = 10,
+    fallbackToGenerated = true
+  } = options;
+
+  console.log(`Job Service: Searching for jobs about "${searchKeywords}"...`);
+
+  let allJobs = [];
+
+  if (useRealAPIs && process.env.REACT_APP_RAPIDAPI_KEY) {
+    // Fetch from multiple sources in parallel
+    const apiPromises = [];
+
+    if (sources.includes('indeed')) {
+      apiPromises.push(fetchIndeedJobs(searchKeywords, maxPerSource));
+    }
+    
+    if (sources.includes('linkedin')) {
+      apiPromises.push(fetchLinkedInJobs(searchKeywords, maxPerSource));
+    }
+    
+    if (sources.includes('github')) {
+      apiPromises.push(fetchGitHubJobs(searchKeywords, maxPerSource));
+    }
+    
+    if (sources.includes('general')) {
+      apiPromises.push(fetchGeneralJobs(searchKeywords, maxPerSource));
+    }
+
+    try {
+      const results = await Promise.allSettled(apiPromises);
+      
+      // Combine successful results
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled' && result.value) {
+          allJobs.push(...result.value);
+        } else {
+          console.warn(`API source ${sources[index]} failed:`, result.reason);
+        }
+      });
+
+      // Remove duplicates
+      allJobs = removeDuplicateJobs(allJobs);
+      
+    } catch (error) {
+      console.error('Error fetching from job APIs:', error);
+    }
   }
 
-  // Fallback to generated jobs
-  console.log("Using generated jobs as fallback");
-  const generatedJobs = searchJobs(searchKeywords);
-  console.log(`Generated ${generatedJobs.length} jobs`);
-  console.log('Sample generated job:', generatedJobs[0]);
-  return generatedJobs.slice(0, 20); // Limit to 20 jobs
+  // Fallback to generated jobs if no real jobs found or APIs disabled
+  if ((allJobs.length === 0 && fallbackToGenerated) || !useRealAPIs) {
+    console.log('Using generated job catalog as fallback...');
+    allJobs = generateJobCatalog(searchKeywords);
+  }
+
+  // Ensure we have jobs and limit results
+  if (allJobs.length === 0) {
+    allJobs = generateJobCatalog().slice(0, 20);
+  }
+
+  // Limit total results for performance
+  allJobs = allJobs.slice(0, 50);
+
+  console.log(`Found ${allJobs.length} jobs total`);
+  if (allJobs.length > 0) {
+    console.log('Sample job:', allJobs[0]);
+  }
+
+  return allJobs;
 };
+
+/**
+ * Get job details by ID from specific provider
+ */
+export const getJobDetails = async (jobId) => {
+  const [provider, id] = jobId.split('_');
+  
+  try {
+    switch (provider) {
+      case 'indeed':
+        return await fetchIndeedJobDetails(id);
+      case 'linkedin':
+        return await fetchLinkedInJobDetails(id);
+      default:
+        throw new Error(`Unknown provider: ${provider}`);
+    }
+  } catch (error) {
+    console.error('Error fetching job details:', error);
+    return null;
+  }
+};
+
+// Helper functions for detailed job fetching
+const fetchIndeedJobDetails = async (jobId) => {
+  // Implementation would depend on the specific API
+  return null;
+};
+
+const fetchLinkedInJobDetails = async (jobId) => {
+  // Implementation would depend on the specific API
+  return null;
+};
+
+/**
+ * Configuration function to set API keys
+ */
+export const configureJobAPIs = (config) => {
+  if (config.rapidApiKey) {
+    API_CONFIG.JOBS_API.headers['X-RapidAPI-Key'] = config.rapidApiKey;
+    API_CONFIG.INDEED_API.headers['X-RapidAPI-Key'] = config.rapidApiKey;
+    API_CONFIG.LINKEDIN_API.headers['X-RapidAPI-Key'] = config.rapidApiKey;
+  }
+};
+
+// Export for external use
+export { API_CONFIG as JOB_API_CONFIG };

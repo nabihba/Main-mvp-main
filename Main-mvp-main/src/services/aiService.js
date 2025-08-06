@@ -10,7 +10,7 @@ import { testGenerators } from './testGenerators';
 const API_KEY = 'AIzaSyAID57D3UKZdSt8Fc-WarY_2rlN4jNAdro';
 
 const genAI = new GoogleGenerativeAI(API_KEY);
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
 const getAiRecommendations = async (userData, courseCatalog, jobListings) => {
   console.log('AI Service: Analyzing user profile...');

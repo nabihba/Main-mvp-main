@@ -1,208 +1,406 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
+  ScrollView,
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
-  ScrollView,
-  TextInput,
+  ActivityIndicator,
+  Alert,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useDarkMode } from '../context/DarkModeContext';
+import { useLanguage } from '../context/LanguageContext';
+import { useUser } from '../context/UserContext';
+import { getDetailedAiAnalysis } from '../services/aiService';
 
-const JobDetailsScreen = () => {
-  const [coverLetter, setCoverLetter] = useState('');
+const JobDetailScreen = ({ navigation, route }) => {
+  const { job } = route.params;
+  const { isDarkMode } = useDarkMode();
+  const { t } = useLanguage();
+  const { userData } = useUser();
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView 
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState(null);
+
+  useEffect(() => {
+    if (job && userData) {
+      performAiAnalysis();
+    }
+  }, [job?.id, userData?.uid]);
+
+  const performAiAnalysis = async () => {
+    setIsAnalyzing(true);
+    setAnalysisError(null);
+    
+    try {
+      console.log('Starting AI analysis for job:', job.title);
+      const analysis = await getDetailedAiAnalysis(job, userData, 'job');
+      setAiAnalysis(analysis);
+      console.log('AI analysis completed:', analysis);
+    } catch (error) {
+      console.error('AI analysis failed:', error);
+      setAnalysisError('Unable to generate AI analysis at this time.');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleApply = () => {
+    if (job.url || job.applyUrl) {
+      const url = job.url || job.applyUrl;
+      Linking.openURL(url).catch(() => {
+        Alert.alert(t('Error'), t('Unable to open job application link'));
+      });
+    } else {
+      Alert.alert(t('Info'), t('Job application link not available'));
+    }
+  };
+
+  const getScoreColor = (score) => {
+    if (score >= 80) return '#10B981';
+    if (score >= 60) return '#F59E0B';
+    return '#EF4444';
+  };
+
+  const getScoreEmoji = (score) => {
+    if (score >= 80) return '🎯';
+    if (score >= 60) return '👍';
+    return '🤔';
+  };
+
+  const getLevelColor = (level) => {
+    switch (level?.toLowerCase()) {
+      case 'entry': return '#10B981';
+      case 'mid': case 'intermediate': return '#F59E0B';
+      case 'senior': case 'advanced': return '#EF4444';
+      default: return '#6B7280';
+    }
+  };
+
+  const getWorkTypeIcon = (workType) => {
+    switch (workType?.toLowerCase()) {
+      case 'remote': return 'home-outline';
+      case 'hybrid': return 'business-outline';
+      case 'onsite': case 'office': return 'location-outline';
+      default: return 'briefcase-outline';
+    }
+  };
+
+  const renderHeader = () => (
+    <View style={[styles.header, isDarkMode && styles.headerDark]}>
+      <TouchableOpacity 
+        style={styles.backButton} 
+        onPress={() => navigation.goBack()}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.closeButton}>
-            <Ionicons name="close" size={24} color="#6b7280" />
+        <Ionicons 
+          name="arrow-back" 
+          size={24} 
+          color={isDarkMode ? "#FFFFFF" : "#1F2937"} 
+        />
+      </TouchableOpacity>
+      <Text style={[styles.headerTitle, isDarkMode && styles.headerTitleDark]}>
+        {t('Job Details')}
+      </Text>
+      <TouchableOpacity style={styles.shareButton}>
+        <Ionicons 
+          name="share-outline" 
+          size={24} 
+          color={isDarkMode ? "#FFFFFF" : "#1F2937"} 
+        />
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderJobInfo = () => (
+    <View style={[styles.jobCard, isDarkMode && styles.jobCardDark]}>
+      <Text style={[styles.jobTitle, isDarkMode && styles.jobTitleDark]}>
+        {job.title}
+      </Text>
+      
+      <Text style={[styles.company, isDarkMode && styles.companyDark]}>
+        {job.company}
+      </Text>
+
+      <View style={styles.jobMetaContainer}>
+        {job.location && (
+          <View style={styles.metaItem}>
+            <Ionicons name="location-outline" size={16} color="#6B7280" />
+            <Text style={[styles.metaText, isDarkMode && styles.metaTextDark]}>
+              {job.location}
+            </Text>
+          </View>
+        )}
+        
+        {job.level && (
+          <View style={styles.metaItem}>
+            <View style={[styles.levelBadge, { backgroundColor: getLevelColor(job.level) + '20' }]}>
+              <Text style={[styles.levelText, { color: getLevelColor(job.level) }]}>
+                {job.level}
+              </Text>
+            </View>
+          </View>
+        )}
+        
+        {job.workType && (
+          <View style={styles.metaItem}>
+            <Ionicons name={getWorkTypeIcon(job.workType)} size={16} color="#6B7280" />
+            <Text style={[styles.metaText, isDarkMode && styles.metaTextDark]}>
+              {job.workType}
+            </Text>
+          </View>
+        )}
+
+        {job.salary && (
+          <View style={styles.metaItem}>
+            <Ionicons name="card-outline" size={16} color="#10B981" />
+            <Text style={[styles.salaryText, isDarkMode && styles.salaryTextDark]}>
+              {job.salary}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {job.category && (
+        <View style={styles.categoryContainer}>
+          <View style={[styles.categoryBadge, isDarkMode && styles.categoryBadgeDark]}>
+            <Ionicons name="folder-outline" size={14} color="#8B5CF6" />
+            <Text style={styles.categoryText}>{job.category}</Text>
+          </View>
+        </View>
+      )}
+
+      {job.description && (
+        <View style={styles.descriptionContainer}>
+          <Text style={[styles.sectionTitle, isDarkMode && styles.sectionTitleDark]}>
+            {t('Job Description')}
+          </Text>
+          <Text style={[styles.description, isDarkMode && styles.descriptionDark]}>
+            {job.description}
+          </Text>
+        </View>
+      )}
+
+      {job.requirements && (
+        <View style={styles.requirementsContainer}>
+          <Text style={[styles.sectionTitle, isDarkMode && styles.sectionTitleDark]}>
+            {t('Requirements')}
+          </Text>
+          <Text style={[styles.requirements, isDarkMode && styles.requirementsDark]}>
+            {job.requirements}
+          </Text>
+        </View>
+      )}
+
+      {job.skills && job.skills.length > 0 && (
+        <View style={styles.skillsContainer}>
+          <Text style={[styles.sectionTitle, isDarkMode && styles.sectionTitleDark]}>
+            {t('Required Skills')}
+          </Text>
+          <View style={styles.skillsGrid}>
+            {job.skills.map((skill, index) => (
+              <View key={index} style={[styles.skillChip, isDarkMode && styles.skillChipDark]}>
+                <Text style={[styles.skillText, isDarkMode && styles.skillTextDark]}>
+                  {skill}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+    </View>
+  );
+
+  const renderAiAnalysis = () => {
+    if (isAnalyzing) {
+      return (
+        <View style={[styles.aiCard, isDarkMode && styles.aiCardDark]}>
+          <View style={styles.aiHeader}>
+            <Ionicons name="brain" size={24} color="#8B5CF6" />
+            <Text style={[styles.aiTitle, isDarkMode && styles.aiTitleDark]}>
+              {t('AI Analysis')}
+            </Text>
+          </View>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#8B5CF6" />
+            <Text style={[styles.loadingText, isDarkMode && styles.loadingTextDark]}>
+              {t('Analyzing this job for you...')}
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
+    if (analysisError) {
+      return (
+        <View style={[styles.aiCard, isDarkMode && styles.aiCardDark, styles.errorCard]}>
+          <View style={styles.aiHeader}>
+            <Ionicons name="alert-circle" size={24} color="#EF4444" />
+            <Text style={[styles.aiTitle, isDarkMode && styles.aiTitleDark]}>
+              {t('AI Analysis')}
+            </Text>
+          </View>
+          <Text style={[styles.errorText, isDarkMode && styles.errorTextDark]}>
+            {analysisError}
+          </Text>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={performAiAnalysis}
+          >
+            <Text style={styles.retryButtonText}>{t('Try Again')}</Text>
           </TouchableOpacity>
         </View>
+      );
+    }
 
-        {/* Job Title Section */}
-        <View style={styles.titleSection}>
-          <Text style={styles.jobTitle}>Junior Frontend Developer</Text>
-          <Text style={styles.companyLocation}>Gulf Tech Solutions • Dubai, UAE</Text>
-        </View>
+    if (!aiAnalysis) return null;
 
-        {/* Job Info Cards */}
-        <View style={styles.infoCards}>
-          <View style={styles.infoCard}>
-            <Ionicons name="location-outline" size={24} color="#6b7280" />
-            <Text style={styles.infoCardTitle}>Hybrid</Text>
-            <Text style={styles.infoCardSubtitle}>Work Type</Text>
-          </View>
-          
-          <View style={styles.infoCard}>
-            <Ionicons name="briefcase-outline" size={24} color="#6b7280" />
-            <Text style={styles.infoCardTitle}>Entry Level</Text>
-            <Text style={styles.infoCardSubtitle}>Level</Text>
-          </View>
-          
-          <View style={styles.infoCard}>
-            <Ionicons name="cash-outline" size={24} color="#6b7280" />
-            <Text style={styles.infoCardTitle}>$3000K - $4500K</Text>
-            <Text style={styles.infoCardSubtitle}>Salary</Text>
-          </View>
-        </View>
-
-        {/* Why This Job Suits You */}
-        <View style={styles.suitabilitySection}>
-          <View style={styles.suitabilityHeader}>
-            <View style={styles.targetIcon}>
-              <Ionicons name="radio-button-on" size={20} color="#10b981" />
-            </View>
-            <Text style={styles.suitabilityTitle}>Why This Job Suits You</Text>
-          </View>
-          <View style={styles.suitabilityContent}>
-            <Text style={styles.suitabilityText}>
-              Your Computer Science background and technical skills align perfectly with this role. The company values fresh graduates with strong fundamentals.
+    return (
+      <View style={[styles.aiCard, isDarkMode && styles.aiCardDark]}>
+        <View style={styles.aiHeader}>
+          <Ionicons name="brain" size={24} color="#8B5CF6" />
+          <Text style={[styles.aiTitle, isDarkMode && styles.aiTitleDark]}>
+            {t('AI Job Analysis')}
+          </Text>
+          <View style={[styles.scoreContainer, { backgroundColor: getScoreColor(aiAnalysis.relevanceScore) + '20' }]}>
+            <Text style={[styles.scoreText, { color: getScoreColor(aiAnalysis.relevanceScore) }]}>
+              {getScoreEmoji(aiAnalysis.relevanceScore)} {aiAnalysis.relevanceScore}%
             </Text>
           </View>
         </View>
 
-        {/* Your Matching Skills */}
-        <View style={styles.skillsSection}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="checkmark-circle" size={24} color="#3b82f6" />
-            <Text style={styles.sectionTitle}>Your Matching Skills</Text>
-          </View>
-          
-          <View style={styles.skillsGrid}>
-            <View style={styles.matchingSkill}>
-              <Ionicons name="checkmark-circle" size={16} color="#3b82f6" />
-              <Text style={styles.matchingSkillText}>JavaScript</Text>
-            </View>
-            <View style={styles.matchingSkill}>
-              <Ionicons name="checkmark-circle" size={16} color="#3b82f6" />
-              <Text style={styles.matchingSkillText}>Problem-solving</Text>
-            </View>
-            <View style={styles.matchingSkillLarge}>
-              <Ionicons name="checkmark-circle" size={16} color="#3b82f6" />
-              <Text style={styles.matchingSkillText}>Technical learning ability</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Required Skills */}
-        <View style={styles.skillsSection}>
-          <Text style={styles.sectionTitle}>Required Skills</Text>
-          
-          <View style={styles.requiredSkillsGrid}>
-            <View style={styles.requiredSkill}>
-              <Text style={styles.requiredSkillText}>JavaScript</Text>
-            </View>
-            <View style={styles.requiredSkill}>
-              <Text style={styles.requiredSkillText}>React</Text>
-            </View>
-            <View style={styles.requiredSkill}>
-              <Text style={styles.requiredSkillText}>HTML/CSS</Text>
-            </View>
-            <View style={styles.requiredSkill}>
-              <Text style={styles.requiredSkillText}>Git</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Soft Skills */}
-        <View style={styles.skillsSection}>
-          <Text style={styles.sectionTitle}>Soft Skills for Success</Text>
-          
-          <View style={styles.softSkillsContainer}>
-            <View style={styles.softSkill}>
-              <Text style={styles.softSkillText}>Team collaboration</Text>
-            </View>
-            <View style={styles.softSkill}>
-              <Text style={styles.softSkillText}>Communication with clients</Text>
-            </View>
-            <View style={styles.softSkill}>
-              <Text style={styles.softSkillText}>Adaptability to new technologies</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Career Growth */}
-        <View style={styles.careerGrowthSection}>
-          <Text style={styles.careerGrowthTitle}>Career Growth Potential</Text>
-          <Text style={styles.careerGrowthText}>
-            This entry-level position offers mentorship programs and clear advancement to Senior Developer within 2-3 years.
+        {/* Summary */}
+        <View style={styles.analysisSection}>
+          <Text style={[styles.analysisSectionTitle, isDarkMode && styles.analysisSectionTitleDark]}>
+            {t('Job Summary')}
+          </Text>
+          <Text style={[styles.analysisText, isDarkMode && styles.analysisTextDark]}>
+            {aiAnalysis.summary}
           </Text>
         </View>
 
-        {/* Job Description */}
-        <View style={styles.descriptionSection}>
-          <Text style={styles.descriptionText}>
-            applications using React and TypeScript
+        {/* Personalized Recommendation */}
+        <View style={[styles.analysisSection, styles.recommendationSection]}>
+          <Text style={[styles.analysisSectionTitle, isDarkMode && styles.analysisSectionTitleDark]}>
+            {t('Why This Job Matches You')}
+          </Text>
+          <Text style={[styles.analysisText, isDarkMode && styles.analysisTextDark, styles.recommendationText]}>
+            {aiAnalysis.personalizedRecommendation}
           </Text>
         </View>
 
-        {/* Requirements */}
-        <View style={styles.requirementsSection}>
-          <Text style={styles.sectionTitle}>Requirements</Text>
-          <View style={styles.requirementsList}>
-            <View style={styles.requirementItem}>
-              <View style={styles.bulletPoint} />
-              <Text style={styles.requirementText}>Bachelor's in CS or related field</Text>
-            </View>
-            <View style={styles.requirementItem}>
-              <View style={styles.bulletPoint} />
-              <Text style={styles.requirementText}>Experience with React</Text>
-            </View>
-            <View style={styles.requirementItem}>
-              <View style={styles.bulletPoint} />
-              <Text style={styles.requirementText}>Strong HTML/CSS skills</Text>
-            </View>
+        {/* Key Benefits */}
+        {aiAnalysis.keyBenefits && aiAnalysis.keyBenefits.length > 0 && (
+          <View style={styles.analysisSection}>
+            <Text style={[styles.analysisSectionTitle, isDarkMode && styles.analysisSectionTitleDark]}>
+              {t('Key Opportunities')}
+            </Text>
+            {aiAnalysis.keyBenefits.map((benefit, index) => (
+              <View key={index} style={styles.benefitItem}>
+                <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                <Text style={[styles.benefitText, isDarkMode && styles.benefitTextDark]}>
+                  {benefit}
+                </Text>
+              </View>
+            ))}
           </View>
-        </View>
+        )}
 
-        {/* CV Info */}
-        <View style={styles.cvInfoSection}>
-          <View style={styles.cvInfoHeader}>
-            <Ionicons name="document-text" size={20} color="#3b82f6" />
-            <Text style={styles.cvInfoTitle}>Your CV Will Be Sent</Text>
+        {/* Skills Gained */}
+        {aiAnalysis.skillsGained && aiAnalysis.skillsGained.length > 0 && (
+          <View style={styles.analysisSection}>
+            <Text style={[styles.analysisSectionTitle, isDarkMode && styles.analysisSectionTitleDark]}>
+              {t('Skills You\'ll Develop')}
+            </Text>
+            <View style={styles.skillsGainedContainer}>
+              {aiAnalysis.skillsGained.map((skill, index) => (
+                <View key={index} style={[styles.skillGainedChip, isDarkMode && styles.skillGainedChipDark]}>
+                  <Text style={[styles.skillGainedText, isDarkMode && styles.skillGainedTextDark]}>
+                    {skill}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </View>
-          <Text style={styles.cvInfoText}>
-            When you apply, your CV and profile information will be automatically sent to Gulf Tech Solutions's hiring team. Make sure your profile is up-to-date for the best impression.
-          </Text>
-        </View>
+        )}
 
-        {/* Apply Section */}
-        <View style={styles.applySection}>
-          <View style={styles.applySectionHeader}>
-            <Ionicons name="folder-outline" size={20} color="#b45309" />
-            <Text style={styles.applySectionTitle}>Apply for This Position</Text>
+        {/* Career Progression */}
+        {aiAnalysis.careerProgression && (
+          <View style={styles.analysisSection}>
+            <Text style={[styles.analysisSectionTitle, isDarkMode && styles.analysisSectionTitleDark]}>
+              {t('Career Impact')}
+            </Text>
+            <Text style={[styles.analysisText, isDarkMode && styles.analysisTextDark]}>
+              {aiAnalysis.careerProgression}
+            </Text>
           </View>
-          
-          <TextInput
-            style={styles.coverLetterInput}
-            placeholder="Add an optional cover letter or introduction message..."
-            placeholderTextColor="#9ca3af"
-            value={coverLetter}
-            onChangeText={setCoverLetter}
-            multiline
-            numberOfLines={6}
-            textAlignVertical="top"
-          />
-          
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.applyButton}>
-              <Ionicons name="document-text" size={16} color="#ffffff" />
-              <Text style={styles.applyButtonText}>Send CV & Apply</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.saveButton}>
-              <Text style={styles.saveButtonText}>Save Job</Text>
-            </TouchableOpacity>
+        )}
+
+        {/* Regional Context */}
+        {aiAnalysis.regionalContext && (
+          <View style={styles.analysisSection}>
+            <Text style={[styles.analysisSectionTitle, isDarkMode && styles.analysisSectionTitleDark]}>
+              {t('Regional Opportunities')}
+            </Text>
+            <Text style={[styles.analysisText, isDarkMode && styles.analysisTextDark]}>
+              {aiAnalysis.regionalContext}
+            </Text>
           </View>
-        </View>
+        )}
+
+        {/* Honest Assessment */}
+        {aiAnalysis.honestAssessment && (
+          <View style={[styles.analysisSection, styles.honestAssessmentSection]}>
+            <Text style={[styles.analysisSectionTitle, isDarkMode && styles.analysisSectionTitleDark]}>
+              {t('Should You Apply?')}
+            </Text>
+            <Text style={[styles.analysisText, isDarkMode && styles.analysisTextDark, styles.honestAssessmentText]}>
+              {aiAnalysis.honestAssessment}
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  const renderActionButtons = () => (
+    <View style={[styles.actionContainer, isDarkMode && styles.actionContainerDark]}>
+      <TouchableOpacity
+        style={[styles.applyButton, aiAnalysis?.relevanceScore >= 70 && styles.applyButtonHighScore]}
+        onPress={handleApply}
+      >
+        <Text style={styles.applyButtonText}>
+          {t('Apply Now')}
+        </Text>
+        <Ionicons name="send" size={20} color="#FFFFFF" />
+      </TouchableOpacity>
+      
+      <TouchableOpacity style={[styles.saveButton, isDarkMode && styles.saveButtonDark]}>
+        <Ionicons name="bookmark-outline" size={20} color={isDarkMode ? "#FFFFFF" : "#374151"} />
+        <Text style={[styles.saveButtonText, isDarkMode && styles.saveButtonTextDark]}>
+          {t('Save Job')}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={[styles.container, isDarkMode && styles.containerDark]}>
+      {renderHeader()}
+      
+      <ScrollView 
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {renderJobInfo()}
+        {renderAiAnalysis()}
       </ScrollView>
+      
+      {renderActionButtons()}
     </SafeAreaView>
   );
 };
@@ -210,297 +408,403 @@ const JobDetailsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#F9FAFB',
+  },
+  containerDark: {
+    backgroundColor: '#111827',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  headerDark: {
+    backgroundColor: '#1F2937',
+    borderBottomColor: '#374151',
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  headerTitleDark: {
+    color: '#F9FAFB',
+  },
+  shareButton: {
+    padding: 8,
   },
   scrollView: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
+  scrollContent: {
+    paddingBottom: 100,
   },
-  closeButton: {
-    padding: 8,
+  jobCard: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 20,
+    marginTop: 20,
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  titleSection: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
+  jobCardDark: {
+    backgroundColor: '#1F2937',
   },
   jobTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#065f46',
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    lineHeight: 32,
     marginBottom: 8,
   },
-  companyLocation: {
-    fontSize: 16,
-    color: '#6b7280',
-    fontWeight: '400',
+  jobTitleDark: {
+    color: '#F9FAFB',
   },
-  infoCards: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 32,
-  },
-  infoCard: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  infoCardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1f2937',
-    marginTop: 8,
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  infoCardSubtitle: {
-    fontSize: 12,
-    color: '#6b7280',
-    fontWeight: '400',
-  },
-  suitabilitySection: {
-    marginHorizontal: 20,
-    marginBottom: 32,
-  },
-  suitabilityHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  targetIcon: {
-    marginRight: 8,
-  },
-  suitabilityTitle: {
+  company: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#065f46',
+    color: '#059669',
+    fontWeight: '600',
+    marginBottom: 16,
   },
-  suitabilityContent: {
-    backgroundColor: '#f0fdf4',
-    borderRadius: 12,
-    padding: 16,
+  companyDark: {
+    color: '#34D399',
   },
-  suitabilityText: {
-    fontSize: 14,
-    color: '#065f46',
-    lineHeight: 20,
+  jobMetaContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 16,
   },
-  skillsSection: {
-    paddingHorizontal: 20,
-    marginBottom: 32,
-  },
-  sectionHeader: {
+  metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+  },
+  metaText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  metaTextDark: {
+    color: '#9CA3AF',
+  },
+  levelBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  levelText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  salaryText: {
+    fontSize: 14,
+    color: '#059669',
+    fontWeight: '600',
+  },
+  salaryTextDark: {
+    color: '#34D399',
+  },
+  categoryContainer: {
     marginBottom: 16,
+  },
+  categoryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3E8FF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    alignSelf: 'flex-start',
+    gap: 6,
+  },
+  categoryBadgeDark: {
+    backgroundColor: '#581C87',
+  },
+  categoryText: {
+    fontSize: 12,
+    color: '#8B5CF6',
+    fontWeight: '600',
+  },
+  descriptionContainer: {
+    marginBottom: 20,
+  },
+  requirementsContainer: {
+    marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1f2937',
-    marginLeft: 8,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+  sectionTitleDark: {
+    color: '#F9FAFB',
+  },
+  description: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#4B5563',
+  },
+  descriptionDark: {
+    color: '#D1D5DB',
+  },
+  requirements: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#4B5563',
+  },
+  requirementsDark: {
+    color: '#D1D5DB',
+  },
+  skillsContainer: {
+    marginBottom: 20,
   },
   skillsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
-  matchingSkill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#eff6ff',
+  skillChip: {
+    backgroundColor: '#FEF3C7',
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 6,
     borderRadius: 20,
-    marginRight: 8,
-    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#FCD34D',
   },
-  matchingSkillLarge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#eff6ff',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    width: '100%',
-    marginBottom: 8,
+  skillChipDark: {
+    backgroundColor: '#92400E',
+    borderColor: '#D97706',
   },
-  matchingSkillText: {
+  skillText: {
     fontSize: 14,
-    color: '#1d4ed8',
+    color: '#92400E',
     fontWeight: '500',
-    marginLeft: 6,
   },
-  requiredSkillsGrid: {
+  skillTextDark: {
+    color: '#FCD34D',
+  },
+  aiCard: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 20,
+    marginTop: 20,
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  aiCardDark: {
+    backgroundColor: '#1F2937',
+  },
+  aiHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  aiTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    flex: 1,
+    marginLeft: 12,
+  },
+  aiTitleDark: {
+    color: '#F9FAFB',
+  },
+  scoreContainer: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  scoreText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  loadingTextDark: {
+    color: '#9CA3AF',
+  },
+  errorCard: {
+    borderColor: '#FEE2E2',
+    borderWidth: 1,
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  errorTextDark: {
+    color: '#FCA5A5',
+  },
+  retryButton: {
+    backgroundColor: '#DC2626',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  analysisSection: {
+    marginBottom: 20,
+  },
+  analysisSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  analysisSectionTitleDark: {
+    color: '#F9FAFB',
+  },
+  analysisText: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#4B5563',
+  },
+  analysisTextDark: {
+    color: '#D1D5DB',
+  },
+  recommendationSection: {
+    backgroundColor: '#ECFDF5',
+    padding: 16,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#059669',
+  },
+  recommendationText: {
+    color: '#065F46',
+  },
+  benefitItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+    gap: 8,
+  },
+  benefitText: {
+    fontSize: 15,
+    color: '#4B5563',
+    flex: 1,
+  },
+  benefitTextDark: {
+    color: '#D1D5DB',
+  },
+  skillsGainedContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
-  requiredSkill: {
-    backgroundColor: '#f3f4f6',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
-    marginBottom: 8,
+  skillGainedChip: {
+    backgroundColor: '#DBEAFE',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#3B82F6',
   },
-  requiredSkillText: {
-    fontSize: 14,
-    color: '#4b5563',
+  skillGainedChipDark: {
+    backgroundColor: '#1E3A8A',
+    borderColor: '#2563EB',
+  },
+  skillGainedText: {
+    fontSize: 13,
+    color: '#1D4ED8',
     fontWeight: '500',
   },
-  softSkillsContainer: {
-    gap: 8,
+  skillGainedTextDark: {
+    color: '#93C5FD',
   },
-  softSkill: {
-    backgroundColor: '#faf5ff',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-    marginBottom: 8,
-  },
-  softSkillText: {
-    fontSize: 14,
-    color: '#7c3aed',
-    fontWeight: '500',
-  },
-  careerGrowthSection: {
-    marginHorizontal: 20,
-    backgroundColor: '#fffbeb',
-    borderRadius: 12,
+  honestAssessmentSection: {
+    backgroundColor: '#FEF3C7',
     padding: 16,
-    marginBottom: 32,
-  },
-  careerGrowthTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#92400e',
-    marginBottom: 8,
-  },
-  careerGrowthText: {
-    fontSize: 14,
-    color: '#92400e',
-    lineHeight: 20,
-  },
-  descriptionSection: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  descriptionText: {
-    fontSize: 14,
-    color: '#4b5563',
-    lineHeight: 20,
-  },
-  requirementsSection: {
-    paddingHorizontal: 20,
-    marginBottom: 32,
-  },
-  requirementsList: {
-    marginTop: 12,
-  },
-  requirementItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  bulletPoint: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#6b7280',
-    marginRight: 12,
-  },
-  requirementText: {
-    fontSize: 14,
-    color: '#4b5563',
-    lineHeight: 20,
-  },
-  cvInfoSection: {
-    marginHorizontal: 20,
-    backgroundColor: '#eff6ff',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 32,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F59E0B',
   },
-  cvInfoHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
+  honestAssessmentText: {
+    color: '#92400E',
+    fontStyle: 'italic',
   },
-  cvInfoTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1d4ed8',
-    marginLeft: 8,
-  },
-  cvInfoText: {
-    fontSize: 14,
-    color: '#1d4ed8',
-    lineHeight: 20,
-  },
-  applySection: {
+  actionContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
-    marginBottom: 32,
-  },
-  applySectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  applySectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1f2937',
-    marginLeft: 8,
-  },
-  coverLetterInput: {
-    borderWidth: 2,
-    borderColor: '#1f2937',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 14,
-    color: '#1f2937',
-    marginBottom: 16,
-    minHeight: 120,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
     gap: 12,
   },
+  actionContainerDark: {
+    backgroundColor: '#1F2937',
+    borderTopColor: '#374151',
+  },
   applyButton: {
-    flex: 2,
-    backgroundColor: '#065f46',
+    backgroundColor: '#059669',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
     borderRadius: 12,
+    gap: 8,
+  },
+  applyButtonHighScore: {
+    backgroundColor: '#10B981',
   },
   applyButtonText: {
-    color: '#ffffff',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
-    marginLeft: 8,
   },
   saveButton: {
-    flex: 1,
-    backgroundColor: '#f3f4f6',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    gap: 8,
+  },
+  saveButtonDark: {
+    borderColor: '#4B5563',
   },
   saveButtonText: {
-    color: '#4b5563',
-    fontSize: 16,
-    fontWeight: '600',
+    color: '#374151',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  saveButtonTextDark: {
+    color: '#D1D5DB',
   },
 });
 
-export default JobDetailsScreen;
+export default JobDetailScreen;

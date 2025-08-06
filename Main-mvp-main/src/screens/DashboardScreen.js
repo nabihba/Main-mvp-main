@@ -17,7 +17,10 @@ import CourseDetailModal from '../components/CourseDetailModal';
 import { useDarkMode } from '../context/DarkModeContext';
 import { useUser } from '../context/UserContext';
 import { useLanguage } from '../context/LanguageContext';
-import { runFullAiAnalysis } from '../services/aiService';
+
+// Import the enhanced services
+import { fetchCourses } from '../services/courseService';
+import { fetchJobs } from '../services/jobService';
 
 const HomepageScreen = ({ navigation, onScreenChange }) => {
   const { userData, updateUserData, clearUserData } = useUser();
@@ -36,33 +39,126 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [filteredJobs, setFilteredJobs] = useState([]);
 
+  // Generate search keywords based on user profile
+  const generateUserSearchKeywords = () => {
+    if (!userData) return '';
+    
+    const keywords = [];
+    
+    // Add specialization/field of study
+    if (userData.specialization) keywords.push(userData.specialization);
+    if (userData.fieldOfStudy) keywords.push(userData.fieldOfStudy);
+    
+    // Add skills from questionnaire
+    if (userData.technicalSkills) keywords.push(...userData.technicalSkills);
+    if (userData.softSkills) keywords.push(...userData.softSkills);
+    
+    // Add interests
+    if (userData.interests) keywords.push(...userData.interests);
+    if (userData.careerGoals) keywords.push(...userData.careerGoals);
+    
+    // Add degree level context
+    if (userData.degreeLevel) keywords.push(userData.degreeLevel);
+    
+    return keywords.join(' ');
+  };
+
+  // Load initial data based on user profile
   useEffect(() => {
-    if (userData) {
-      console.log('User data received:', userData);
-      console.log('Recommended courses:', userData.recommendedCourses);
-      console.log('Recommended jobs:', userData.recommendedJobs);
-      
-      // ✅ --- THIS IS THE FIX --- ✅
-      // We add .filter(item => item && item.id) to safely remove any bad data
-      // that might have been saved to the user's profile, preventing the crash.
-      const filteredCourses = (userData.recommendedCourses || []).filter(c => c && c.id);
-      const filteredJobs = (userData.recommendedJobs || []).filter(j => j && j.id);
-      
-      console.log('Filtered courses:', filteredCourses.length);
-      console.log('Filtered jobs:', filteredJobs.length);
-      
-      // If no recommendations, try to get some test data
-      if (filteredCourses.length === 0 || filteredJobs.length === 0) {
-        console.log('No recommendations found, this might be a new user or analysis failed');
+    const loadRecommendations = async () => {
+      if (!userData) {
+        setIsLoading(false);
+        return;
       }
-      
-      setCourses(filteredCourses);
-      setJobs(filteredJobs);
-      setFilteredCourses(filteredCourses);
-      setFilteredJobs(filteredJobs);
-    }
-    setIsLoading(false);
-  }, [userData]);
+
+      setIsLoading(true);
+      try {
+        console.log('Loading personalized recommendations for user:', userData.firstName);
+        
+        // Generate search keywords based on user profile
+        const userKeywords = generateUserSearchKeywords();
+        console.log('Generated search keywords:', userKeywords);
+
+        // Fetch courses and jobs in parallel
+        const [coursesData, jobsData] = await Promise.all([
+          fetchCourses(userKeywords, {
+            useRealAPIs: true,
+            sources: ['udemy', 'coursera', 'classcentral'],
+            maxPerSource: 15,
+            fallbackToGenerated: true
+          }),
+          fetchJobs(userKeywords, {
+            useRealAPIs: true,
+            sources: ['indeed', 'linkedin', 'github'],
+            maxPerSource: 15,
+            fallbackToGenerated: true
+          })
+        ]);
+
+        console.log(`Loaded ${coursesData.length} courses and ${jobsData.length} jobs`);
+
+        // Normalize course data to prevent errors
+        const normalizedCourses = coursesData.map(course => ({
+          ...course,
+          skills: Array.isArray(course.skills) 
+            ? course.skills 
+            : Array.isArray(course.tags) 
+              ? course.tags 
+              : typeof course.skills === 'string'
+                ? course.skills.split(',').map(s => s.trim())
+                : [],
+          image: course.imageUrl || course.image || 'https://source.unsplash.com/400x300/?education,course',
+          duration: course.duration || 'Self-paced',
+          level: course.level || 'Beginner'
+        }));
+
+        // Normalize job data
+        const normalizedJobs = jobsData.map(job => ({
+          ...job,
+          skills: Array.isArray(job.skills) 
+            ? job.skills 
+            : Array.isArray(job.requirements)
+              ? job.requirements
+              : typeof job.skills === 'string'
+                ? job.skills.split(',').map(s => s.trim())
+                : [],
+          image: job.image || job.companyLogo || 'https://source.unsplash.com/400x400/?company,office',
+          workType: job.workType || job.type || 'Full-time',
+          category: job.category || job.department || 'General'
+        }));
+
+        setCourses(normalizedCourses);
+        setJobs(normalizedJobs);
+        setFilteredCourses(normalizedCourses);
+        setFilteredJobs(normalizedJobs);
+
+        // Update user data with recommendations (optional - for caching)
+        const updatedUserData = {
+          ...userData,
+          recommendedCourses: normalizedCourses,
+          recommendedJobs: normalizedJobs,
+          lastAnalysisDate: new Date().toISOString()
+        };
+        updateUserData(updatedUserData);
+
+      } catch (error) {
+        console.error('Error loading recommendations:', error);
+        
+        // Fallback to any cached recommendations
+        const cachedCourses = userData.recommendedCourses || [];
+        const cachedJobs = userData.recommendedJobs || [];
+        
+        setCourses(cachedCourses);
+        setJobs(cachedJobs);
+        setFilteredCourses(cachedCourses);
+        setFilteredJobs(cachedJobs);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadRecommendations();
+  }, [userData?.uid]); // Only re-run when user changes
 
   // Filter courses and jobs based on search query
   useEffect(() => {
@@ -75,13 +171,20 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
         course.title?.toLowerCase().includes(query) ||
         course.provider?.toLowerCase().includes(query) ||
         course.description?.toLowerCase().includes(query) ||
-        course.skills?.toLowerCase().includes(query)
+        course.category?.toLowerCase().includes(query) ||
+        (Array.isArray(course.skills) && course.skills.some(skill => 
+          skill.toLowerCase().includes(query)
+        ))
       );
       const filteredJ = jobs.filter(job =>
         job.title?.toLowerCase().includes(query) ||
         job.company?.toLowerCase().includes(query) ||
         job.description?.toLowerCase().includes(query) ||
-        job.category?.toLowerCase().includes(query)
+        job.category?.toLowerCase().includes(query) ||
+        job.location?.toLowerCase().includes(query) ||
+        (Array.isArray(job.skills) && job.skills.some(skill => 
+          skill.toLowerCase().includes(query)
+        ))
       );
       setFilteredCourses(filteredC);
       setFilteredJobs(filteredJ);
@@ -96,23 +199,54 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
     
     setIsLoading(true);
     try {
-      console.log('Starting AI analysis refresh...');
-      const { recommendedCourses, recommendedJobs } = await runFullAiAnalysis(userData);
+      console.log('Refreshing recommendations...');
       
-      console.log('AI analysis completed:', { recommendedCourses: recommendedCourses?.length, recommendedJobs: recommendedJobs?.length });
+      const userKeywords = generateUserSearchKeywords();
       
-      const updatedUserData = { ...userData, recommendedCourses, recommendedJobs, lastAnalysisDate: new Date() };
+      // Fetch fresh data
+      const [coursesData, jobsData] = await Promise.all([
+        fetchCourses(userKeywords, {
+          useRealAPIs: true,
+          sources: ['udemy', 'coursera', 'classcentral'],
+          maxPerSource: 20,
+          fallbackToGenerated: true
+        }),
+        fetchJobs(userKeywords, {
+          useRealAPIs: true,
+          sources: ['indeed', 'linkedin', 'github'],
+          maxPerSource: 20,
+          fallbackToGenerated: true
+        })
+      ]);
+
+      // Normalize data
+      const normalizedCourses = coursesData.map(course => ({
+        ...course,
+        skills: Array.isArray(course.skills) ? course.skills : [],
+        image: course.imageUrl || course.image || 'https://source.unsplash.com/400x300/?education,course'
+      }));
+
+      const normalizedJobs = jobsData.map(job => ({
+        ...job,
+        skills: Array.isArray(job.skills) ? job.skills : [],
+        image: job.image || job.companyLogo || 'https://source.unsplash.com/400x400/?company,office'
+      }));
+
+      setCourses(normalizedCourses);
+      setJobs(normalizedJobs);
+      setFilteredCourses(normalizedCourses);
+      setFilteredJobs(normalizedJobs);
+
+      // Update user data
+      const updatedUserData = {
+        ...userData,
+        recommendedCourses: normalizedCourses,
+        recommendedJobs: normalizedJobs,
+        lastAnalysisDate: new Date().toISOString()
+      };
       updateUserData(updatedUserData);
 
-      // Also apply the safety filter here
-      const filteredCourses = (recommendedCourses || []).filter(c => c && c.id);
-      const filteredJobs = (recommendedJobs || []).filter(j => j && j.id);
-      
-      console.log('Setting filtered data:', { courses: filteredCourses.length, jobs: filteredJobs.length });
-      setCourses(filteredCourses);
-      setJobs(filteredJobs);
-
-      Alert.alert(t('Success'), t('Your AI suggestions have been refreshed!'));
+      Alert.alert(t('Success'), t('Your recommendations have been refreshed!'));
     } catch (error) {
       console.error("Refresh failed:", error);
       Alert.alert(t('Error'), t('Could not refresh suggestions at this time.'));
@@ -122,8 +256,27 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
   };
 
   const handleMenuPress = () => setShowSidebar(!showSidebar);
-  const handleJobPress = (job) => { setSelectedJob(job); setShowJobModal(true); };
-  const handleCoursePress = (course) => { setSelectedCourse(course); setShowCourseModal(true); };
+  
+  const handleJobPress = (job) => { 
+    // Ensure job has all required fields before opening modal
+    const normalizedJob = {
+      ...job,
+      skills: Array.isArray(job.skills) ? job.skills : []
+    };
+    setSelectedJob(normalizedJob); 
+    setShowJobModal(true); 
+  };
+  
+  const handleCoursePress = (course) => { 
+    // Ensure course has all required fields before opening modal
+    const normalizedCourse = {
+      ...course,
+      skills: Array.isArray(course.skills) ? course.skills : []
+    };
+    setSelectedCourse(normalizedCourse); 
+    setShowCourseModal(true); 
+  };
+  
   const handleProfilePress = () => { setShowSidebar(false); if (onScreenChange) onScreenChange('Profile'); };
   const handleCalendarPress = () => { setShowSidebar(false); if (onScreenChange) onScreenChange('Calendar'); };
   const handleSettingsPress = () => { setShowSidebar(false); if (onScreenChange) onScreenChange('Settings'); };
@@ -143,48 +296,131 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
     <SafeAreaView style={containerStyle}>
       {showSidebar && (
         <View style={[styles.sidebar, isDarkMode && styles.sidebarDark]}>
-          <View style={styles.sidebarHeader}><View style={styles.logoContainer}><View style={styles.logoCircle}><Text style={styles.logoText}>{userData.firstName ? userData.firstName.charAt(0).toUpperCase() : 'B'}</Text></View><Text style={[styles.logoTitle, titleStyle]}>BridgeIT</Text></View></View>
-          <View style={styles.sidebarMenu}><TouchableOpacity style={[styles.menuItem, styles.activeMenuItem]}><Ionicons name="home" size={20} color="#065F46" /><Text style={[styles.menuText, titleStyle]}>{t('Home')}</Text></TouchableOpacity><TouchableOpacity style={styles.menuItem} onPress={handleProfilePress}><Ionicons name="person" size={20} color="#6B7280" /><Text style={[styles.menuText, textStyle]}>{t('Profile')}</Text></TouchableOpacity><TouchableOpacity style={styles.menuItem} onPress={handleCalendarPress}><Ionicons name="calendar-outline" size={20} color="#6B7280" /><Text style={[styles.menuText, textStyle]}>{t('Calendar')}</Text></TouchableOpacity><TouchableOpacity style={styles.menuItem} onPress={handleSettingsPress}><Ionicons name="settings-outline" size={20} color="#6B7280" /><Text style={[styles.menuText, textStyle]}>{t('Settings')}</Text></TouchableOpacity><TouchableOpacity style={styles.menuItem} onPress={handleLogout}><Ionicons name="log-out-outline" size={20} color="#EF4444" /><Text style={[styles.menuText, { color: '#EF4444' }]}>{t('Logout')}</Text></TouchableOpacity></View>
-          <View style={styles.sidebarFooter}><View style={styles.userInfo}>{userData.profileImage ? <Image source={{ uri: userData.profileImage }} style={styles.userAvatar} /> : <View style={styles.userAvatarPlaceholder}><Text style={styles.userAvatarText}>{userData.firstName ? userData.firstName.charAt(0).toUpperCase() : 'U'}</Text></View>}<View><Text style={[styles.userName, titleStyle]}>{userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : userData.specialization || 'ICT Graduate'}</Text><Text style={[styles.userLocation, textStyle]}>{userData.region || 'West Bank'}</Text></View></View></View>
+          <View style={styles.sidebarHeader}>
+            <View style={styles.logoContainer}>
+              <View style={styles.logoCircle}>
+                <Text style={styles.logoText}>
+                  {userData?.firstName ? userData.firstName.charAt(0).toUpperCase() : 'B'}
+                </Text>
+              </View>
+              <Text style={[styles.logoTitle, titleStyle]}>BridgeIT</Text>
+            </View>
+          </View>
+          <View style={styles.sidebarMenu}>
+            <TouchableOpacity style={[styles.menuItem, styles.activeMenuItem]}>
+              <Ionicons name="home" size={20} color="#065F46" />
+              <Text style={[styles.menuText, titleStyle]}>{t('Home')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={handleProfilePress}>
+              <Ionicons name="person" size={20} color="#6B7280" />
+              <Text style={[styles.menuText, textStyle]}>{t('Profile')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={handleCalendarPress}>
+              <Ionicons name="calendar-outline" size={20} color="#6B7280" />
+              <Text style={[styles.menuText, textStyle]}>{t('Calendar')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={handleSettingsPress}>
+              <Ionicons name="settings-outline" size={20} color="#6B7280" />
+              <Text style={[styles.menuText, textStyle]}>{t('Settings')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+              <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+              <Text style={[styles.menuText, { color: '#EF4444' }]}>{t('Logout')}</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.sidebarFooter}>
+            <View style={styles.userInfo}>
+              {userData?.profileImage ? (
+                <Image source={{ uri: userData.profileImage }} style={styles.userAvatar} />
+              ) : (
+                <View style={styles.userAvatarPlaceholder}>
+                  <Text style={styles.userAvatarText}>
+                    {userData?.firstName ? userData.firstName.charAt(0).toUpperCase() : 'U'}
+                  </Text>
+                </View>
+              )}
+              <View>
+                <Text style={[styles.userName, titleStyle]}>
+                  {userData?.firstName && userData?.lastName 
+                    ? `${userData.firstName} ${userData.lastName}` 
+                    : userData?.specialization || 'ICT Graduate'
+                  }
+                </Text>
+                <Text style={[styles.userLocation, textStyle]}>
+                  {userData?.region || 'West Bank'}
+                </Text>
+              </View>
+            </View>
+          </View>
         </View>
       )}
 
       <View style={styles.mainContent}>
-        {showSidebar && <TouchableOpacity style={styles.sidebarOverlay} activeOpacity={1} onPress={() => setShowSidebar(false)} />}
+        {showSidebar && (
+          <TouchableOpacity 
+            style={styles.sidebarOverlay} 
+            activeOpacity={1} 
+            onPress={() => setShowSidebar(false)} 
+          />
+        )}
         <View style={[styles.header, isDarkMode && styles.headerDark]}>
-          <TouchableOpacity onPress={handleMenuPress}><Ionicons name="menu" size={24} color={isDarkMode ? "#FFFFFF" : "#1f2937"} /></TouchableOpacity>
-          <View style={styles.logoContainer}><View style={styles.logoCircle}><Text style={styles.logoText}>{userData.firstName ? userData.firstName.charAt(0).toUpperCase() : 'B'}</Text></View><Text style={[styles.logoTitle, titleStyle]}>BridgeIT</Text></View>
-          <TouchableOpacity onPress={handleRefreshSuggestions}><Ionicons name="refresh" size={24} color={isDarkMode ? "#FFFFFF" : "#1f2937"} /></TouchableOpacity>
+          <TouchableOpacity onPress={handleMenuPress}>
+            <Ionicons name="menu" size={24} color={isDarkMode ? "#FFFFFF" : "#1f2937"} />
+          </TouchableOpacity>
+          <View style={styles.logoContainer}>
+            <View style={styles.logoCircle}>
+              <Text style={styles.logoText}>
+                {userData?.firstName ? userData.firstName.charAt(0).toUpperCase() : 'B'}
+              </Text>
+            </View>
+            <Text style={[styles.logoTitle, titleStyle]}>BridgeIT</Text>
+          </View>
+          <TouchableOpacity onPress={handleRefreshSuggestions}>
+            <Ionicons name="refresh" size={24} color={isDarkMode ? "#FFFFFF" : "#1f2937"} />
+          </TouchableOpacity>
         </View>
+        
         <View style={styles.welcomeSection}>
-          <Text style={[styles.welcomeTitle, titleStyle]}>{t('Welcome')}, {userData.firstName || 'User'}!</Text>
-          <Text style={[styles.welcomeSubtitle, textStyle]}>{t('Your career hub is ready.')}</Text>
+          <Text style={[styles.welcomeTitle, titleStyle]}>
+            {t('Welcome')}, {userData?.firstName || 'User'}!
+          </Text>
+          <Text style={[styles.welcomeSubtitle, textStyle]}>
+            {t('Your personalized career recommendations')}
+          </Text>
         </View>
         
         {/* AI Recommendations Section */}
-        {userData.analysisComplete && (
-          <View style={styles.aiRecommendationsSection}>
-            <View style={styles.aiHeader}>
-              <Ionicons name="sparkles" size={24} color="#556B2F" />
-              <Text style={[styles.aiTitle, titleStyle]}>{t('AI Recommendations')}</Text>
-            </View>
-            <Text style={[styles.aiSubtitle, textStyle]}>
-              {activeTab === 'Courses' 
-                ? t('These courses are recommended by our AI based on your profile')
-                : t('These jobs are recommended by our AI based on your profile')
-              }
-            </Text>
+        <View style={styles.aiRecommendationsSection}>
+          <View style={styles.aiHeader}>
+            <Ionicons name="sparkles" size={24} color="#556B2F" />
+            <Text style={[styles.aiTitle, titleStyle]}>{t('AI Recommendations')}</Text>
           </View>
-        )}
+          <Text style={[styles.aiSubtitle, textStyle]}>
+            {activeTab === 'Courses' 
+              ? t('Courses tailored to your profile and career goals')
+              : t('Jobs matching your skills and interests')
+            }
+          </Text>
+        </View>
         
         <View style={styles.tabContainer}>
-          <TouchableOpacity style={[styles.tab, activeTab === 'Jobs' ? styles.activeTab : styles.inactiveTab]} onPress={() => setActiveTab('Jobs')}>
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === 'Jobs' ? styles.activeTab : styles.inactiveTab]} 
+            onPress={() => setActiveTab('Jobs')}
+          >
             <Ionicons name="briefcase-outline" size={20} color={activeTab === 'Jobs' ? "#1f2937" : "#9ca3af"} />
-            <Text style={[styles.tabText, activeTab === 'Jobs' ? styles.activeTabText : styles.inactiveTabText]}>{t('Jobs')}</Text>
+            <Text style={[styles.tabText, activeTab === 'Jobs' ? styles.activeTabText : styles.inactiveTabText]}>
+              {t('Jobs')} ({filteredJobs.length})
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.tab, activeTab === 'Courses' ? styles.activeTab : styles.inactiveTab]} onPress={() => setActiveTab('Courses')}>
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === 'Courses' ? styles.activeTab : styles.inactiveTab]} 
+            onPress={() => setActiveTab('Courses')}
+          >
             <Ionicons name="book-outline" size={20} color={activeTab === 'Courses' ? "#1f2937" : "#9ca3af"} />
-            <Text style={[styles.tabText, activeTab === 'Courses' ? styles.activeTabText : styles.inactiveTabText]}>{t('Courses')}</Text>
+            <Text style={[styles.tabText, activeTab === 'Courses' ? styles.activeTabText : styles.inactiveTabText]}>
+              {t('Courses')} ({filteredCourses.length})
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -211,7 +447,7 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
           {isLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={isDarkMode ? "#FFFFFF" : "#065F46"} />
-              <Text style={textStyle}>Loading Recommendations...</Text>
+              <Text style={[textStyle, { marginTop: 16 }]}>Loading personalized recommendations...</Text>
             </View>
           ) : activeTab === 'Jobs' ? (
             <View>
@@ -222,7 +458,7 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
                       <View style={styles.categoryTag}>
                         <Text style={styles.categoryText}>{job.category || 'General'}</Text>
                       </View>
-                      <Image source={{uri: job.image || 'https://source.unsplash.com/400x400/?company,logo'}} style={styles.jobIcon} />
+                      <Image source={{uri: job.image}} style={styles.jobIcon} />
                     </View>
                     <Text style={[styles.jobTitle, titleStyle]}>{job.title}</Text>
                     <Text style={[styles.companyName, textStyle]}>{job.company}</Text>
@@ -236,7 +472,9 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
                         <Text style={styles.jobDetailText}>{job.workType}</Text>
                       </View>
                     </View>
-                    <Text style={[styles.jobDescription, textStyle]} numberOfLines={3}>{job.description}</Text>
+                    <Text style={[styles.jobDescription, textStyle]} numberOfLines={3}>
+                      {job.description}
+                    </Text>
                     <TouchableOpacity style={styles.viewDetailsButton} onPress={() => handleJobPress(job)}>
                       <Text style={styles.viewDetailsText}>{t('View Details')}</Text>
                       <Ionicons name="arrow-forward" size={16} color="#ffffff" />
@@ -250,7 +488,10 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
                     {searchQuery ? t('No jobs found matching your search') : t('No job recommendations yet')}
                   </Text>
                   <Text style={[styles.emptyStateSubtext, textStyle]}>
-                    {searchQuery ? t('Try adjusting your search terms') : t('Complete the questionnaire to get personalized job recommendations')}
+                    {searchQuery 
+                      ? t('Try adjusting your search terms') 
+                      : t('Complete your profile to get personalized job recommendations')
+                    }
                   </Text>
                 </View>
               )}
@@ -278,7 +519,9 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
                         <Text style={styles.courseDetailText}>Online</Text>
                       </View>
                     </View>
-                    <Text style={[styles.courseDescription, textStyle]} numberOfLines={3}>{course.description}</Text>
+                    <Text style={[styles.courseDescription, textStyle]} numberOfLines={3}>
+                      {course.description}
+                    </Text>
                     <TouchableOpacity style={styles.viewDetailsButton} onPress={() => handleCoursePress(course)}>
                       <Text style={styles.viewDetailsText}>{t('View Details')}</Text>
                       <Ionicons name="arrow-forward" size={16} color="#ffffff" />
@@ -292,7 +535,10 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
                     {searchQuery ? t('No courses found matching your search') : t('No course recommendations yet')}
                   </Text>
                   <Text style={[styles.emptyStateSubtext, textStyle]}>
-                    {searchQuery ? t('Try adjusting your search terms') : t('Complete the questionnaire to get personalized course recommendations')}
+                    {searchQuery 
+                      ? t('Try adjusting your search terms') 
+                      : t('Complete your profile to get personalized course recommendations')
+                    }
                   </Text>
                 </View>
               )}
@@ -301,12 +547,21 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
         </ScrollView>
       </View>
 
-      <JobDetailModal visible={showJobModal} job={selectedJob} onClose={() => setShowJobModal(false)} />
-      <CourseDetailModal visible={showCourseModal} course={selectedCourse} onClose={() => setShowCourseModal(false)} />
+      <JobDetailModal 
+        visible={showJobModal} 
+        job={selectedJob} 
+        onClose={() => setShowJobModal(false)} 
+      />
+      <CourseDetailModal 
+        visible={showCourseModal} 
+        course={selectedCourse} 
+        onClose={() => setShowCourseModal(false)} 
+      />
     </SafeAreaView>
   );
 };
 
+// Styles remain the same as your original
 const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 50 },
   container: { flex: 1, backgroundColor: '#f8fafc' },
@@ -397,6 +652,7 @@ const styles = StyleSheet.create({
   courseDetails: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: 20, marginBottom: 12 },
   courseDetailItem: { flexDirection: 'row', alignItems: 'center', marginRight: 16, marginBottom: 4 },
   courseDetailText: { fontSize: 14, color: '#6b7280', marginLeft: 4 },
+  courseDescription: { fontSize: 14, color: '#4b5563', lineHeight: 20, marginHorizontal: 20, marginBottom: 16 },
   emptyState: { 
     flex: 1, 
     justifyContent: 'center', 
