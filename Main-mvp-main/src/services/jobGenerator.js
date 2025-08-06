@@ -575,6 +575,45 @@ const generateRandomJob = (index) => {
   const level = ['Entry Level', 'Mid Level', 'Senior Level'][Math.floor(Math.random() * 3)];
   const category = ['Technology', 'Data Science', 'Cybersecurity', 'Design', 'Management'][Math.floor(Math.random() * 5)];
 
+  // Generate relevant skills based on category
+  const skillsByCategory = {
+    'Technology': ['JavaScript', 'Python', 'React', 'Node.js', 'Git', 'API Development', 'Problem Solving'],
+    'Data Science': ['Python', 'R', 'SQL', 'Machine Learning', 'Statistics', 'Data Visualization', 'Pandas'],
+    'Cybersecurity': ['Network Security', 'Risk Assessment', 'Incident Response', 'Encryption', 'Compliance'],
+    'Design': ['UI/UX Design', 'Figma', 'Adobe Creative Suite', 'Prototyping', 'User Research', 'Wireframing'],
+    'Management': ['Leadership', 'Project Management', 'Strategic Planning', 'Team Building', 'Communication']
+  };
+
+  const availableSkills = skillsByCategory[category] || skillsByCategory['Technology'];
+  const numSkills = Math.floor(Math.random() * 3) + 3; // 3-5 skills
+  const jobSkills = [];
+  const requirements = [];
+  
+  for (let i = 0; i < numSkills; i++) {
+    const skill = availableSkills[Math.floor(Math.random() * availableSkills.length)];
+    if (!jobSkills.includes(skill)) {
+      jobSkills.push(skill);
+      requirements.push(`${skill} experience required`);
+    }
+  }
+
+  // Add some general requirements
+  const generalRequirements = [
+    'Bachelor\'s degree or equivalent experience',
+    'Strong communication skills',
+    'Team collaboration abilities',
+    'Problem-solving mindset',
+    'Adaptability to new technologies'
+  ];
+  
+  const additionalReqs = Math.floor(Math.random() * 2) + 1;
+  for (let i = 0; i < additionalReqs; i++) {
+    const req = generalRequirements[Math.floor(Math.random() * generalRequirements.length)];
+    if (!requirements.includes(req)) {
+      requirements.push(req);
+    }
+  }
+
   // Add variations to job titles to make them more diverse
   const titleVariations = [
     `${title}`,
@@ -601,6 +640,8 @@ const generateRandomJob = (index) => {
     workType: workType,
     level: level,
     category: category,
+    skills: jobSkills, // Array of required skills
+    requirements: requirements, // Array of requirements
     image: `https://source.unsplash.com/400x400/?${company.split(' ')[0]},logo`,
     job_url: `https://example.com/jobs/${title.toLowerCase().replace(/\s+/g, '-')}`,
   };
@@ -622,7 +663,8 @@ export const searchJobs = (searchTerm) => {
     job.title.toLowerCase().includes(searchLower) ||
     job.company.toLowerCase().includes(searchLower) ||
     job.description.toLowerCase().includes(searchLower) ||
-    job.category.toLowerCase().includes(searchLower)
+    job.category.toLowerCase().includes(searchLower) ||
+    (job.skills && job.skills.join(' ').toLowerCase().includes(searchLower))
   );
 };
 

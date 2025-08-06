@@ -17,7 +17,7 @@ import CourseDetailModal from '../components/CourseDetailModal';
 import { useDarkMode } from '../context/DarkModeContext';
 import { useUser } from '../context/UserContext';
 import { useLanguage } from '../context/LanguageContext';
-import { runFullAiAnalysis } from '../services/aiService';
+import { runFullAiAnalysis, getDetailedAiAnalysis } from '../services/aiService';
 
 const HomepageScreen = ({ navigation, onScreenChange }) => {
   const { userData, updateUserData, clearUserData } = useUser();
@@ -75,7 +75,8 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
         course.title?.toLowerCase().includes(query) ||
         course.provider?.toLowerCase().includes(query) ||
         course.description?.toLowerCase().includes(query) ||
-        course.skills?.toLowerCase().includes(query)
+        course.skillsString?.toLowerCase().includes(query) ||
+        (Array.isArray(course.skills) ? course.skills.join(' ').toLowerCase().includes(query) : course.skills?.toLowerCase().includes(query))
       );
       const filteredJ = jobs.filter(job =>
         job.title?.toLowerCase().includes(query) ||
@@ -122,8 +123,55 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
   };
 
   const handleMenuPress = () => setShowSidebar(!showSidebar);
-  const handleJobPress = (job) => { setSelectedJob(job); setShowJobModal(true); };
-  const handleCoursePress = (course) => { setSelectedCourse(course); setShowCourseModal(true); };
+  const handleJobPress = async (job) => { 
+    console.log('Opening job details for:', job.title);
+    
+    // Get AI analysis for this specific job
+    try {
+      const aiAnalysis = await getDetailedAiAnalysis(job, userData, 'job');
+      console.log('AI analysis for job:', aiAnalysis);
+      
+      // Enhance job object with AI insights
+      const enhancedJob = {
+        ...job,
+        suitabilityReason: aiAnalysis?.personalizedRecommendation || job.suitabilityReason,
+        matchingSkills: aiAnalysis?.skillsGained || job.matchingSkills || [],
+        aiAnalysis: aiAnalysis
+      };
+      
+      setSelectedJob(enhancedJob);
+    } catch (error) {
+      console.error('Failed to get AI analysis for job:', error);
+      setSelectedJob(job); // Use original job if AI fails
+    }
+    
+    setShowJobModal(true); 
+  };
+
+  const handleCoursePress = async (course) => { 
+    console.log('Opening course details for:', course.title);
+    
+    // Get AI analysis for this specific course
+    try {
+      const aiAnalysis = await getDetailedAiAnalysis(course, userData, 'course');
+      console.log('AI analysis for course:', aiAnalysis);
+      
+      // Enhance course object with AI insights
+      const enhancedCourse = {
+        ...course,
+        helpReason: aiAnalysis?.personalizedRecommendation || course.helpReason,
+        skillsGained: aiAnalysis?.skillsGained || course.skills || [],
+        aiAnalysis: aiAnalysis
+      };
+      
+      setSelectedCourse(enhancedCourse);
+    } catch (error) {
+      console.error('Failed to get AI analysis for course:', error);
+      setSelectedCourse(course); // Use original course if AI fails
+    }
+    
+    setShowCourseModal(true); 
+  };
   const handleProfilePress = () => { setShowSidebar(false); if (onScreenChange) onScreenChange('Profile'); };
   const handleCalendarPress = () => { setShowSidebar(false); if (onScreenChange) onScreenChange('Calendar'); };
   const handleSettingsPress = () => { setShowSidebar(false); if (onScreenChange) onScreenChange('Settings'); };

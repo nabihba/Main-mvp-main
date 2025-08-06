@@ -356,7 +356,8 @@ const generateCourses = (count, topicList) => {
       level: ['Beginner', 'Intermediate', 'Advanced'][Math.floor(Math.random() * 3)],
       duration: length,
       price: price,
-      skills: skills.join(', '),
+      skills: skills, // Keep as array for proper AI processing
+      skillsString: skills.join(', '), // Add string version for search
       course_url: `https://example.com/course/${name.toLowerCase().replace(/\s+/g, '-')}`
     });
   }
@@ -398,7 +399,7 @@ export const searchCourses = (searchTerm) => {
   return allCourses.filter(course => 
     course.title.toLowerCase().includes(searchLower) ||
     course.description.toLowerCase().includes(searchLower) ||
-    course.skills.toLowerCase().includes(searchLower) ||
+    course.skillsString.toLowerCase().includes(searchLower) ||
     course.provider.toLowerCase().includes(searchLower)
   );
 }; 

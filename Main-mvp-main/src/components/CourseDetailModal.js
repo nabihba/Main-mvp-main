@@ -69,14 +69,54 @@ const CourseDetailModal = ({ visible, course, onClose }) => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Ionicons name="bulb-outline" size={20} color="#065F46" />
-              <Text style={[styles.sectionTitle, isDarkMode && styles.sectionTitleDark]}>{t('Why This Course Will Help You')}</Text>
+              <Text style={[styles.sectionTitle, isDarkMode && styles.sectionTitleDark]}>{t('Why This Course Is Perfect For You')}</Text>
             </View>
             <View style={[styles.helpCard, isDarkMode && styles.helpCardDark]}>
               <Text style={[styles.helpText, isDarkMode && styles.helpTextDark]}>
-                {course.helpReason || t("This course is designed to enhance your skills and knowledge in the field. It's perfect for your current experience level and career goals.")}
+                {course.helpReason || course.aiAnalysis?.personalizedRecommendation || t("This course is designed to enhance your skills and knowledge in the field. It's perfect for your current experience level and career goals.")}
               </Text>
+              {course.aiAnalysis?.relevanceScore && (
+                <View style={styles.scoreContainer}>
+                  <Text style={[styles.scoreLabel, isDarkMode && styles.scoreLabelDark]}>
+                    {t('Match Score')}: {course.aiAnalysis.relevanceScore}%
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
+
+          {/* AI Analysis: Key Benefits */}
+          {course.aiAnalysis?.keyBenefits && course.aiAnalysis.keyBenefits.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="star-outline" size={20} color="#F59E0B" />
+                <Text style={[styles.sectionTitle, isDarkMode && styles.sectionTitleDark]}>{t('Key Benefits For You')}</Text>
+              </View>
+              <View style={styles.benefitsContainer}>
+                {course.aiAnalysis.keyBenefits.map((benefit, index) => (
+                  <View key={index} style={[styles.benefitItem, isDarkMode && styles.benefitItemDark]}>
+                    <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                    <Text style={[styles.benefitText, isDarkMode && styles.benefitTextDark]}>{benefit}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Career Progression */}
+          {course.aiAnalysis?.careerProgression && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="trending-up" size={20} color="#8B5CF6" />
+                <Text style={[styles.sectionTitle, isDarkMode && styles.sectionTitleDark]}>{t('Career Impact')}</Text>
+              </View>
+              <View style={[styles.progressionCard, isDarkMode && styles.progressionCardDark]}>
+                <Text style={[styles.progressionText, isDarkMode && styles.progressionTextDark]}>
+                  {course.aiAnalysis.careerProgression}
+                </Text>
+              </View>
+            </View>
+          )}
 
           {/* Skills You'll Develop */}
           <View style={styles.section}>
@@ -85,7 +125,7 @@ const CourseDetailModal = ({ visible, course, onClose }) => {
               <Text style={[styles.sectionTitle, isDarkMode && styles.sectionTitleDark]}>{t('Skills You\'ll Develop')}</Text>
             </View>
             <View style={styles.skillsContainer}>
-              {course.skills?.map((skill, index) => (
+              {(course.skillsGained || course.aiAnalysis?.skillsGained || course.skills || []).map((skill, index) => (
                 <View key={index} style={[styles.skillTag, isDarkMode && styles.skillTagDark]}>
                   <Text style={[styles.skillText, isDarkMode && styles.skillTextDark]}>{skill}</Text>
                 </View>
@@ -391,6 +431,68 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginRight: 8,
+  },
+  scoreContainer: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+  },
+  scoreLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#065F46',
+    backgroundColor: '#E6FFFA',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  scoreLabelDark: {
+    color: '#10B981',
+    backgroundColor: '#064E3B',
+  },
+  benefitsContainer: {
+    gap: 12,
+  },
+  benefitItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFFBEB',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#F59E0B',
+  },
+  benefitItemDark: {
+    backgroundColor: '#451A03',
+    borderLeftColor: '#F59E0B',
+  },
+  benefitText: {
+    fontSize: 14,
+    color: '#92400E',
+    marginLeft: 8,
+    flex: 1,
+    lineHeight: 18,
+  },
+  benefitTextDark: {
+    color: '#FCD34D',
+  },
+  progressionCard: {
+    backgroundColor: '#F5F3FF',
+    padding: 16,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#8B5CF6',
+  },
+  progressionCardDark: {
+    backgroundColor: '#2E1065',
+    borderLeftColor: '#8B5CF6',
+  },
+  progressionText: {
+    fontSize: 14,
+    color: '#5B21B6',
+    lineHeight: 20,
+  },
+  progressionTextDark: {
+    color: '#C4B5FD',
   },
 });
 
