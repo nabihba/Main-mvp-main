@@ -83,23 +83,48 @@ const JobDetailModal = ({ visible, job, onClose }) => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Ionicons name="target" size={20} color="#10B981" />
-              <Text style={sectionTitleStyle}>{t('Why This Job Suits You')}</Text>
+              <Text style={sectionTitleStyle}>{t('Why This Job Is Perfect For You')}</Text>
             </View>
             <View style={suitabilityCardStyle}>
               <Text style={suitabilityTextStyle}>
-                {job.suitabilityReason || t("Your background and skills align perfectly with this role. The company values candidates with your experience level.")}
+              {job.suitabilityReason || job.aiAnalysis?.personalizedRecommendation || t("Your background and skills align perfectly with this role. The company values candidates with your experience level.")}
               </Text>
+              {job.aiAnalysis?.relevanceScore && (
+                <View style={styles.scoreContainer}>
+                  <Text style={[styles.scoreLabel, isDarkMode && styles.scoreLabelDark]}>
+                    {t('Match Score')}: {job.aiAnalysis.relevanceScore}%
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
+          
+          {/* AI Analysis: Key Benefits */}
+          {job.aiAnalysis?.keyBenefits && job.aiAnalysis.keyBenefits.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="star-outline" size={20} color="#F59E0B" />
+                <Text style={sectionTitleStyle}>{t('Key Benefits For You')}</Text>
+              </View>
+              <View style={styles.benefitsContainer}>
+                {job.aiAnalysis.keyBenefits.map((benefit, index) => (
+                  <View key={index} style={[styles.benefitItem, isDarkMode && styles.benefitItemDark]}>
+                    <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                    <Text style={[styles.benefitText, isDarkMode && styles.benefitTextDark]}>{benefit}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
 
           {/* Your Matching Skills */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Ionicons name="checkmark-circle" size={20} color="#3B82F6" />
-              <Text style={sectionTitleStyle}>{t('Matching Skills')}</Text>
+              <Text style={sectionTitleStyle}>{t('Your Matching Skills')}</Text>
             </View>
             <View style={styles.skillsContainer}>
-              {job.matchingSkills?.map((skill, index) => (
+            {(job.matchingSkills || job.aiAnalysis?.skillsGained || job.skills || []).map((skill, index) => (
                 <View key={index} style={skillTagStyle}>
                   <Ionicons name="checkmark-circle" size={16} color="#3B82F6" />
                   <Text style={skillTextStyle}>{skill}</Text>
@@ -107,6 +132,20 @@ const JobDetailModal = ({ visible, job, onClose }) => {
               ))}
             </View>
           </View>
+          {/* Career Progression */}
+          {job.aiAnalysis?.careerProgression && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="trending-up" size={20} color="#8B5CF6" />
+                <Text style={sectionTitleStyle}>{t('Career Growth Potential')}</Text>
+              </View>
+              <View style={[styles.progressionCard, isDarkMode && styles.progressionCardDark]}>
+                <Text style={[styles.progressionText, isDarkMode && styles.progressionTextDark]}>
+                  {job.aiAnalysis.careerProgression}
+                </Text>
+              </View>
+            </View>
+          )}
 
           {/* Job Description */}
           <View style={styles.section}>
@@ -400,6 +439,69 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginRight: 8,
+  },
+
+  scoreContainer: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+  },
+  scoreLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#065F46',
+    backgroundColor: '#E6FFFA',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  scoreLabelDark: {
+    color: '#10B981',
+    backgroundColor: '#064E3B',
+  },
+  benefitsContainer: {
+    gap: 12,
+  },
+  benefitItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFFBEB',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#F59E0B',
+  },
+  benefitItemDark: {
+    backgroundColor: '#451A03',
+    borderLeftColor: '#F59E0B',
+  },
+  benefitText: {
+    fontSize: 14,
+    color: '#92400E',
+    marginLeft: 8,
+    flex: 1,
+    lineHeight: 18,
+  },
+  benefitTextDark: {
+    color: '#FCD34D',
+  },
+  progressionCard: {
+    backgroundColor: '#F5F3FF',
+    padding: 16,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#8B5CF6',
+  },
+  progressionCardDark: {
+    backgroundColor: '#2E1065',
+    borderLeftColor: '#8B5CF6',
+  },
+  progressionText: {
+    fontSize: 14,
+    color: '#5B21B6',
+    lineHeight: 20,
+  },
+  progressionTextDark: {
+    color: '#C4B5FD',
   },
 });
 

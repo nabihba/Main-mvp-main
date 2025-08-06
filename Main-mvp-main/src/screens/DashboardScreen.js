@@ -17,7 +17,7 @@ import CourseDetailModal from '../components/CourseDetailModal';
 import { useDarkMode } from '../context/DarkModeContext';
 import { useUser } from '../context/UserContext';
 import { useLanguage } from '../context/LanguageContext';
-
+import { runFullAiAnalysis, getDetailedAiAnalysis } from '../services/aiService';
 // Import the enhanced services
 import { fetchCourses } from '../services/courseService';
 import { fetchJobs } from '../services/jobService';
