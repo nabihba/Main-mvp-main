@@ -62,56 +62,56 @@ const fetchUdemyCourses = async (searchKeywords, maxResults = 15) => {
 };
 
 /**
- * ✅ NEW - Fetches courses from edX API via RapidAPI
+ * ✅ NEW - Fetches courses from Skillshare API via RapidAPI
  */
-const fetchEdXCourses = async (searchKeywords, maxResults = 15) => {
+const fetchSkillshareCourses = async (searchKeywords, maxResults = 15) => {
   if (!RAPIDAPI_KEY) {
-    console.log('RapidAPI key not configured. Skipping edX API fetch.');
+    console.log('RapidAPI key not configured. Skipping Skillshare API fetch.');
     return [];
   }
 
   const query = searchKeywords || 'programming';
-  const url = `https://edx-courses.p.rapidapi.com/search?q=${encodeURIComponent(query)}&limit=${maxResults}`;
+  const url = `https://skillshare.p.rapidapi.com/search?query=${encodeURIComponent(query)}&limit=${maxResults}`;
   const options = {
     method: 'GET',
     headers: {
       'x-rapidapi-key': RAPIDAPI_KEY,
-      'x-rapidapi-host': 'edx-courses.p.rapidapi.com'
+      'x-rapidapi-host': 'skillshare.p.rapidapi.com'
     }
   };
 
   try {
-    console.log(`Fetching edX courses from RapidAPI for: "${query}"`);
+    console.log(`Fetching Skillshare courses from RapidAPI for: "${query}"`);
     const response = await fetch(url, options);
     if (!response.ok) {
-      throw new Error(`edX RapidAPI request failed with status: ${response.status}`);
+      throw new Error(`Skillshare RapidAPI request failed with status: ${response.status}`);
     }
     const result = await response.json();
     const coursesFromApi = result.courses || result.data || [];
 
     const normalizedCourses = coursesFromApi.map((course, index) => {
-      const uniqueId = `edx_${course.id || course.course_id || index}_${index}`;
+      const uniqueId = `skillshare_${course.id || course.course_id || index}_${index}`;
       return {
         id: uniqueId,
         title: course.title || course.name,
-        provider: 'edX',
-        category: course.subject || course.category || 'Education',
-        description: course.description || course.short_description || 'High-quality course from top universities',
-        image: course.image || course.course_image || 'https://source.unsplash.com/400x300/?education,university',
+        provider: 'Skillshare',
+        category: course.category || course.subject || 'Creative & Design',
+        description: course.description || course.short_description || 'Creative and practical courses from industry experts',
+        image: course.image || course.course_image || 'https://source.unsplash.com/400x300/?creative,design',
         price: course.price || 'Free',
-        url: course.url || course.course_url || `https://www.edx.org/course/${course.id}`,
+        url: course.url || course.course_url || `https://www.skillshare.com/classes/${course.id}`,
         level: course.level || 'All Levels',
         duration: course.duration || course.length || 'N/A',
         skills: course.skills || [],
-        rating: course.rating || 4.5,
+        rating: course.rating || 4.4,
         students: course.enrollment || course.students || 0
       };
     });
 
-    console.log(`Successfully fetched and normalized ${normalizedCourses.length} courses from edX.`);
+    console.log(`Successfully fetched and normalized ${normalizedCourses.length} courses from Skillshare.`);
     return normalizedCourses;
   } catch (error) {
-    console.error('edX RapidAPI fetch error:', error.message);
+    console.error('Skillshare RapidAPI fetch error:', error.message);
     return []; // Return empty array on failure, which triggers the fallback
   }
 };
@@ -241,7 +241,7 @@ const generateRelevantCourses = (searchKeywords, maxResults = 20) => {
 export const fetchCourses = async (searchKeywords = '', options = {}) => {
   const {
     useRealAPIs = true, // Changed to true by default
-    sources = ['udemy', 'edx', 'coursera'], // Added edX to default sources
+    sources = ['udemy', 'skillshare', 'coursera'], // Changed edx to skillshare
     maxPerSource = 15,
     fallbackToGenerated = true
   } = options;
@@ -260,8 +260,8 @@ export const fetchCourses = async (searchKeywords = '', options = {}) => {
       fetchPromises.push(fetchUdemyCourses(query, maxPerSource));
     }
     
-    if (sources.includes('edx')) {
-      fetchPromises.push(fetchEdXCourses(query, maxPerSource));
+    if (sources.includes('skillshare')) {
+      fetchPromises.push(fetchSkillshareCourses(query, maxPerSource));
     }
     
     if (sources.includes('coursera')) {
