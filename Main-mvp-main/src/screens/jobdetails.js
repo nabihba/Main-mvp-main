@@ -72,14 +72,6 @@ const JobDetailScreen = ({ navigation, route }) => {
     return '🤔';
   };
 
-  const getLevelColor = (level) => {
-    switch (level?.toLowerCase()) {
-      case 'entry': return '#10B981';
-      case 'mid': case 'intermediate': return '#F59E0B';
-      case 'senior': case 'advanced': return '#EF4444';
-      default: return '#6B7280';
-    }
-  };
 
   const getWorkTypeIcon = (workType) => {
     switch (workType?.toLowerCase()) {
@@ -135,15 +127,7 @@ const JobDetailScreen = ({ navigation, route }) => {
           </View>
         )}
         
-        {job.level && (
-          <View style={styles.metaItem}>
-            <View style={[styles.levelBadge, { backgroundColor: getLevelColor(job.level) + '20' }]}>
-              <Text style={[styles.levelText, { color: getLevelColor(job.level) }]}>
-                {job.level}
-              </Text>
-            </View>
-          </View>
-        )}
+
         
         {job.workType && (
           <View style={styles.metaItem}>
@@ -164,14 +148,7 @@ const JobDetailScreen = ({ navigation, route }) => {
         )}
       </View>
 
-      {job.category && (
-        <View style={styles.categoryContainer}>
-          <View style={[styles.categoryBadge, isDarkMode && styles.categoryBadgeDark]}>
-            <Ionicons name="folder-outline" size={14} color="#8B5CF6" />
-            <Text style={styles.categoryText}>{job.category}</Text>
-          </View>
-        </View>
-      )}
+
 
       {job.description && (
         <View style={styles.descriptionContainer}>

@@ -67,11 +67,7 @@ const JobDetailModal = ({ visible, job, onClose }) => {
               <Text style={attributeLabelStyle}>{job.workType}</Text>
               <Text style={attributeDescriptionStyle}>{t('Work Type')}</Text>
             </View>
-            <View style={attributeCardStyle}>
-              <Ionicons name="briefcase-outline" size={20} color="#6B7280" />
-              <Text style={attributeLabelStyle}>{job.level}</Text>
-              <Text style={attributeDescriptionStyle}>{t('Level')}</Text>
-            </View>
+
             <View style={attributeCardStyle}>
               <Ionicons name="cash-outline" size={20} color="#6B7280" />
               <Text style={attributeLabelStyle}>{job.salary}</Text>
@@ -120,7 +116,7 @@ const JobDetailModal = ({ visible, job, onClose }) => {
           {/* Your Matching Skills */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="checkmark-circle" size={20} color="#3B82F6" />
+              <Ionicons name="pin-outline" size={20} color="#3B82F6" />
               <Text style={sectionTitleStyle}>{t('Your Matching Skills')}</Text>
             </View>
             <View style={styles.skillsContainer}>
@@ -149,17 +145,23 @@ const JobDetailModal = ({ visible, job, onClose }) => {
 
           {/* Job Description */}
           <View style={styles.section}>
-            <Text style={sectionTitleStyle}>{t('Description')}</Text>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="reader-outline" size={20} color="#4B5563" />
+              <Text style={sectionTitleStyle}>{t('Description')}</Text>
+            </View>
             <Text style={descriptionTextStyle}>{job.description}</Text>
           </View>
 
           {/* Requirements */}
           {job.requirements && (
             <View style={styles.section}>
-              <Text style={sectionTitleStyle}>{t('Requirements')}</Text>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="alert-outline" size={20} color="#DC2626" />
+                <Text style={sectionTitleStyle}>{t('Requirements')}</Text>
+              </View>
               {job.requirements.map((requirement, index) => (
                 <View key={index} style={styles.requirementItem}>
-                  <Ionicons name="checkmark" size={16} color="#10B981" />
+                  <Ionicons name="checkmark" size={16} color="#DC2626" />
                   <Text style={requirementTextStyle}>{requirement}</Text>
                 </View>
               ))}
