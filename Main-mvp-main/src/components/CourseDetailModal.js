@@ -44,11 +44,6 @@ const CourseDetailModal = ({ visible, course, onClose }) => {
           {/* Course Overview */}
           <View style={styles.overviewContainer}>
             <View style={[styles.overviewCard, isDarkMode && styles.overviewCardDark]}>
-              <Ionicons name="globe-outline" size={20} color="#6B7280" />
-              <Text style={[styles.overviewLabel, isDarkMode && styles.overviewLabelDark]}>{course.delivery}</Text>
-              <Text style={[styles.overviewDescription, isDarkMode && styles.overviewDescriptionDark]}>{t('Delivery')}</Text>
-            </View>
-            <View style={[styles.overviewCard, isDarkMode && styles.overviewCardDark]}>
               <Ionicons name="time-outline" size={20} color="#6B7280" />
               <Text style={[styles.overviewLabel, isDarkMode && styles.overviewLabelDark]}>{course.duration}</Text>
               <Text style={[styles.overviewDescription, isDarkMode && styles.overviewDescriptionDark]}>{t('Duration')}</Text>
@@ -60,7 +55,7 @@ const CourseDetailModal = ({ visible, course, onClose }) => {
             </View>
             <View style={[styles.overviewCard, isDarkMode && styles.overviewCardDark]}>
               <Ionicons name="cash-outline" size={20} color="#6B7280" />
-              <Text style={[styles.overviewLabel, isDarkMode && styles.overviewLabelDark]}>{course.price}</Text>
+              <Text style={[styles.overviewLabel, isDarkMode && styles.overviewLabelDark]}>${course.price}</Text>
               <Text style={[styles.overviewDescription, isDarkMode && styles.overviewDescriptionDark]}>{t('Price')}</Text>
             </View>
           </View>
@@ -133,9 +128,13 @@ const CourseDetailModal = ({ visible, course, onClose }) => {
 
           {/* Course Description */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, isDarkMode && styles.sectionTitleDark]}>{t('Course Description')}</Text>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="newspaper-outline" size={20} color="#4b6559" />
+              <Text style={[styles.sectionTitle, isDarkMode && styles.sectionTitleDark]}>{t('Course Description')}</Text>
+            </View>
             <Text style={[styles.descriptionText, isDarkMode && styles.descriptionTextDark]}>{course.description}</Text>
           </View>
+          
 
           {/* Course Outline */}
           {course.outline && (
@@ -241,7 +240,7 @@ const styles = StyleSheet.create({
   overviewContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     marginBottom: 32,
   },
   overviewCard: {
