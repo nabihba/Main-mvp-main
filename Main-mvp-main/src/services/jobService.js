@@ -320,7 +320,8 @@ export const fetchJobs = async (searchKeywords, options = {}) => {
     allJobs = generateJobCatalog().slice(0, 20);
   }
 
-  allJobs = allJobs.slice(0, 50);
+  // Limit total results for performance
+  allJobs = allJobs.slice(0, 20);
 
   console.log(`Found ${allJobs.length} jobs total`);
   return allJobs;
