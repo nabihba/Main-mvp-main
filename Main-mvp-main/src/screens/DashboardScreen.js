@@ -257,23 +257,65 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
 
   const handleMenuPress = () => setShowSidebar(!showSidebar);
   
-  const handleJobPress = (job) => { 
-    // Ensure job has all required fields before opening modal
-    const normalizedJob = {
-      ...job,
-      skills: Array.isArray(job.skills) ? job.skills : []
-    };
-    setSelectedJob(normalizedJob); 
+  const handleJobPress = async (job) => { 
+    console.log('Opening job details for:', job.title);
+    
+    // Get AI analysis for this specific job
+    try {
+      const aiAnalysis = await getDetailedAiAnalysis(job, userData, 'job');
+      console.log('AI analysis for job:', aiAnalysis);
+      
+      // Enhance job object with AI insights
+      const enhancedJob = {
+        ...job,
+        skills: Array.isArray(job.skills) ? job.skills : [],
+        suitabilityReason: aiAnalysis?.personalizedRecommendation || job.suitabilityReason,
+        matchingSkills: aiAnalysis?.skillsGained || job.matchingSkills || job.skills || [],
+        aiAnalysis: aiAnalysis
+      };
+      
+      setSelectedJob(enhancedJob);
+    } catch (error) {
+      console.error('Failed to get AI analysis for job:', error);
+      // Fallback to normalized job if AI fails
+      const normalizedJob = {
+        ...job,
+        skills: Array.isArray(job.skills) ? job.skills : []
+      };
+      setSelectedJob(normalizedJob);
+    }
+    
     setShowJobModal(true); 
   };
   
-  const handleCoursePress = (course) => { 
-    // Ensure course has all required fields before opening modal
-    const normalizedCourse = {
-      ...course,
-      skills: Array.isArray(course.skills) ? course.skills : []
-    };
-    setSelectedCourse(normalizedCourse); 
+  const handleCoursePress = async (course) => { 
+    console.log('Opening course details for:', course.title);
+    
+    // Get AI analysis for this specific course
+    try {
+      const aiAnalysis = await getDetailedAiAnalysis(course, userData, 'course');
+      console.log('AI analysis for course:', aiAnalysis);
+      
+      // Enhance course object with AI insights
+      const enhancedCourse = {
+        ...course,
+        skills: Array.isArray(course.skills) ? course.skills : [],
+        helpReason: aiAnalysis?.personalizedRecommendation || course.helpReason,
+        skillsGained: aiAnalysis?.skillsGained || course.skills || [],
+        aiAnalysis: aiAnalysis
+      };
+      
+      setSelectedCourse(enhancedCourse);
+    } catch (error) {
+      console.error('Failed to get AI analysis for course:', error);
+      // Fallback to normalized course if AI fails
+      const normalizedCourse = {
+        ...course,
+        skills: Array.isArray(course.skills) ? course.skills : []
+      };
+      setSelectedCourse(normalizedCourse);
+    }
+    
     setShowCourseModal(true); 
   };
   
