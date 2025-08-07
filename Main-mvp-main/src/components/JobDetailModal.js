@@ -82,7 +82,7 @@ const JobDetailModal = ({ visible, job, onClose }) => {
           {/* Why This Job Suits You */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="target" size={20} color="#10B981" />
+              <Ionicons name="bookmarks-outline" size={20} color="#10B981" />
               <Text style={sectionTitleStyle}>{t('Why This Job Is Perfect For You')}</Text>
             </View>
             <View style={suitabilityCardStyle}>

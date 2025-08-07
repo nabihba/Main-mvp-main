@@ -3,7 +3,6 @@ import { View, StyleSheet } from 'react-native';
 import DashboardScreen from './DashboardScreen';
 import ProfileScreen from './ProfileScreen';
 import SettingsScreen from './SettingsScreen';
-
 import CareerPlanScreen from './CareerPlanScreen';
 
 const MainScreen = ({ navigation }) => {

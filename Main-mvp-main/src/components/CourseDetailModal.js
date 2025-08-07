@@ -119,7 +119,7 @@ const CourseDetailModal = ({ visible, course, onClose }) => {
           {/* Skills You'll Develop */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="target" size={20} color="#EA580C" />
+              <Ionicons name="bookmarks-outline" size={20} color="#EA580C" />
               <Text style={[styles.sectionTitle, isDarkMode && styles.sectionTitleDark]}>{t('Skills You\'ll Develop')}</Text>
             </View>
             <View style={styles.skillsContainer}>
