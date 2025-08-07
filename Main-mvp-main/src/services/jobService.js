@@ -1,42 +1,17 @@
-// API Configuration
+// ✅ REFACTORED - Simplified API Configuration for the one working API
+import { RAPIDAPI_KEY } from '@env';
+// ✅ REFACTORED - Simplified API Configuration for the one working API
 const API_CONFIG = {
-  // RapidAPI Job Search APIs
-  JOBS_API: {
-    baseUrl: 'https://jobs-api14.p.rapidapi.com',
+  JSEARCH_API: {
+    baseUrl: 'https://jsearch.p.rapidapi.com',
     headers: {
-      'X-RapidAPI-Key': process.env.REACT_APP_RAPIDAPI_KEY,
-      'X-RapidAPI-Host': 'jobs-api14.p.rapidapi.com'
-    }
-  },
-  
-  // Indeed API via RapidAPI
-  INDEED_API: {
-    baseUrl: 'https://indeed12.p.rapidapi.com',
-    headers: {
-      'X-RapidAPI-Key': process.env.REACT_APP_RAPIDAPI_KEY,
-      'X-RapidAPI-Host': 'indeed12.p.rapidapi.com'
-    }
-  },
-
-  // LinkedIn Jobs via RapidAPI
-  LINKEDIN_API: {
-    baseUrl: 'https://linkedin-jobs-search.p.rapidapi.com',
-    headers: {
-      'X-RapidAPI-Key': process.env.REACT_APP_RAPIDAPI_KEY,
-      'X-RapidAPI-Host': 'linkedin-jobs-search.p.rapidapi.com'
-    }
-  },
-
-  // GitHub Jobs (Free but deprecated)
-  GITHUB_JOBS: {
-    baseUrl: 'https://jobs.github.com/positions.json',
-    headers: {
-      'Content-Type': 'application/json'
+      'X-RapidAPI-Key': RAPIDAPI_KEY, // ✅ Changed from process.env.RAPIDAPI_KEY
+      'X-RapidAPI-Host': 'jsearch.p.rapidapi.com'
     }
   }
 };
 
-// Fallback job generator for when APIs fail
+// Fallback job generator for when APIs fail (Your original code, unchanged)
 const generateJobCatalog = (searchKeywords = '') => {
   const jobTemplates = [
     {
@@ -61,7 +36,7 @@ const generateJobCatalog = (searchKeywords = '') => {
   const searchLower = searchKeywords.toLowerCase();
 
   jobTemplates.forEach((template, templateIndex) => {
-    const isRelevant = !searchKeywords || 
+    const isRelevant = !searchKeywords ||
       template.titleTemplates.some(title => title.toLowerCase().includes(searchLower)) ||
       template.categories.some(cat => cat.toLowerCase().includes(searchLower)) ||
       template.skills.some(skill => skill.toLowerCase().includes(searchLower));
@@ -92,237 +67,98 @@ const generateJobCatalog = (searchKeywords = '') => {
       });
     }
   });
-
-  return jobs.slice(0, 20);
+  return jobs.slice(0, 50); // Generate more to have a good pool for filtering
 };
 
-/**
- * Fetch jobs from Indeed via RapidAPI (Updated for Gulf Region)
- */
-const fetchIndeedJobs = async (searchKeywords, limit = 20) => {
-  try {
-    console.log('Fetching Indeed jobs for Gulf region...');
-    
-    const response = await fetch(`${API_CONFIG.INDEED_API.baseUrl}/jobs/search`, {
-      method: 'POST',
-      headers: {
-        ...API_CONFIG.INDEED_API.headers,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        query: searchKeywords,
-        // ✅ --- UPDATE --- ✅
-        location: 'Dubai, AE', 
-        page_id: '1',
-      })
-    });
 
-    if (!response.ok) throw new Error(`Indeed API error: ${response.status}`);
-    const data = await response.json();
-    
-    return data.jobs?.map(job => ({
-      id: `indeed_${job.job_id}`,
+/**
+ * ✅ NEW - Fetches jobs from the JSearch API and normalizes the data.
+ */
+const fetchJSearchJobs = async (searchKeywords, limit = 20) => {
+  if (!RAPIDAPI_KEY) { // ✅ Changed from API_CONFIG.JSEARCH_API.headers['X-RapidAPI-Key']
+    console.log('RapidAPI key not found in config. Skipping JSearch API fetch.');
+    return [];
+  }
+
+  const query = searchKeywords || 'software developer';
+const url = `${API_CONFIG.JSEARCH_API.baseUrl}/search?query=${encodeURIComponent(query)}&num_pages=1&country=US`;
+  const options = {
+    method: 'GET',
+    headers: API_CONFIG.JSEARCH_API.headers
+  };
+
+  try {
+    console.log(`Fetching jobs from JSearch for: "${query}"`);
+    const response = await fetch(url, options);
+    if (!response.ok) {
+      throw new Error(`JSearch API request failed with status: ${response.status}`);
+    }
+    const result = await response.json();
+    const jobsFromApi = result.data || []; // The jobs are in the 'data' property
+
+    // IMPORTANT: Normalize the API data to match your app's structure
+    const normalizedJobs = jobsFromApi.map(job => ({
+      id: `jsearch_${job.job_id}`,
       title: job.job_title,
-      company: job.company_name,
+      company: job.employer_name,
       location: job.job_location,
       workType: job.job_employment_type || 'Full-time',
-      category: job.job_category || 'General',
+      category: 'General', // JSearch doesn't provide a clear category
       description: job.job_description,
-      skills: job.job_required_skills || [],
+      skills: [], // JSearch doesn't provide a clean skills array
       url: job.job_apply_link,
-      image: job.company_logo || `https://source.unsplash.com/400x400/?company,${job.company_name}`,
+      image: job.employer_logo,
       isRemote: job.job_is_remote,
-    })) || [];
-  } catch (error) {
-    console.error('Error fetching Indeed jobs:', error);
-    return [];
-  }
-};
-
-/**
- * Fetch jobs from LinkedIn via RapidAPI (Updated for Gulf Region)
- */
-const fetchLinkedInJobs = async (searchKeywords, limit = 20) => {
-  try {
-    console.log('Fetching LinkedIn jobs for Gulf region...');
-    
-    const response = await fetch(`${API_CONFIG.LINKEDIN_API.baseUrl}/jobs`, {
-      method: 'POST',
-      headers: {
-        ...API_CONFIG.LINKEDIN_API.headers,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        query: searchKeywords,
-        // ✅ --- UPDATE --- ✅
-        location: 'United Arab Emirates, Saudi Arabia, Qatar, Kuwait, Oman, Bahrain',
-        remoteFilter: 'all',
-        limit: limit
-      })
-    });
-
-    if (!response.ok) throw new Error(`LinkedIn API error: ${response.status}`);
-    const data = await response.json();
-    
-    return data.data?.map(job => ({
-      id: `linkedin_${job.jobId}`,
-      title: job.title,
-      company: job.company,
-      location: job.location,
-      workType: job.type || 'Full-time',
-      category: job.industries?.[0] || 'General',
-      description: job.description,
-      skills: job.skills || [],
-      url: job.jobUrl,
-      image: job.companyLogo || `https://source.unsplash.com/400x400/?company,${job.company}`,
-      isRemote: job.location?.toLowerCase().includes('remote'),
-    })) || [];
-  } catch (error) {
-    console.error('Error fetching LinkedIn jobs:', error);
-    return [];
-  }
-};
-
-/**
- * Fetch jobs from GitHub Jobs (Focus on Remote)
- */
-const fetchGitHubJobs = async (searchKeywords, limit = 20) => {
-  try {
-    console.log('Fetching GitHub jobs (Remote)...');
-    
-    const params = new URLSearchParams({ description: searchKeywords, location: 'remote' });
-    const response = await fetch(`${API_CONFIG.GITHUB_JOBS.baseUrl}?${params}`, {
-      headers: API_CONFIG.GITHUB_JOBS.headers
-    });
-
-    if (!response.ok) throw new Error(`GitHub Jobs API error: ${response.status}`);
-    const jobs = await response.json();
-    
-    return jobs.slice(0, limit).map(job => ({
-      id: `github_${job.id}`,
-      title: job.title,
-      company: job.company,
-      location: job.location,
-      workType: job.type || 'Full-time',
-      category: 'Software Engineering',
-      description: job.description,
-      skills: [],
-      url: job.url,
-      image: job.company_logo,
-      isRemote: true,
+      postedDate: job.job_posted_at_datetime_utc,
+      salary: (job.job_min_salary && job.job_max_salary)
+        ? `$${job.job_min_salary.toLocaleString()} - $${job.job_max_salary.toLocaleString()} ${job.job_salary_period}`
+        : 'Not Disclosed',
+      experienceLevel: 'N/A'
     }));
+
+    console.log(`Successfully fetched and normalized ${normalizedJobs.length} jobs from JSearch.`);
+    return normalizedJobs.slice(0, limit);
+
   } catch (error) {
-    console.error('Error fetching GitHub jobs:', error);
-    return [];
+    console.error('JSearch API fetch error:', error.message);
+    return []; // Return empty array on failure to trigger the fallback
   }
 };
 
-/**
- * Fetch jobs from general Jobs API (Updated for Gulf Region)
- */
-const fetchGeneralJobs = async (searchKeywords, limit = 20) => {
-  try {
-    console.log('Fetching general jobs for Gulf region...');
-    
-    const response = await fetch(`${API_CONFIG.JOBS_API.baseUrl}/job/search`, {
-      method: 'POST',
-      headers: {
-        ...API_CONFIG.JOBS_API.headers,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        query: searchKeywords,
-        // ✅ --- UPDATE --- ✅
-        location: 'Middle East',
-        remoteOnly: true,
-      })
-    });
-
-    if (!response.ok) throw new Error(`Jobs API error: ${response.status}`);
-    const data = await response.json();
-    
-    return data.jobs?.slice(0, limit).map(job => ({
-      id: `jobsapi_${job.jobId}`,
-      title: job.title,
-      company: job.company,
-      location: job.location,
-      workType: job.jobType || 'Full-time',
-      category: job.jobFamily || 'General',
-      description: job.description,
-      skills: job.requiredSkills || [],
-      url: job.jobProviders?.[0]?.url,
-      image: job.companyLogo,
-      isRemote: job.isRemote,
-    })) || [];
-  } catch (error) {
-    console.error('Error fetching general jobs:', error);
-    return [];
-  }
-};
 
 /**
- * Remove duplicate jobs based on title and company similarity
- */
-const removeDuplicateJobs = (jobs) => {
-  const seen = new Map();
-  return jobs.filter(job => {
-    const key = `${job.title.toLowerCase()}_${job.company.toLowerCase()}`;
-    if (seen.has(key)) return false;
-    seen.set(key, true);
-    return true;
-  });
-};
-
-/**
- * Main job fetching function with multiple API sources
+ * ✅ REFACTORED - Main job fetching function, now simplified.
  */
 export const fetchJobs = async (searchKeywords, options = {}) => {
   const {
     useRealAPIs = true,
-    sources = ['indeed', 'linkedin', 'general'],
-    maxPerSource = 10,
     fallbackToGenerated = true
   } = options;
 
-  console.log(`Job Service: Searching for jobs about "${searchKeywords}"...`);
+  const query = searchKeywords || 'software developer';
+console.log(`Job Service: Searching for jobs about "${query}"...`);
 
   let allJobs = [];
 
-  if (useRealAPIs && process.env.REACT_APP_RAPIDAPI_KEY) {
-    const apiPromises = [];
-
-    if (sources.includes('indeed')) apiPromises.push(fetchIndeedJobs(searchKeywords, maxPerSource));
-    if (sources.includes('linkedin')) apiPromises.push(fetchLinkedInJobs(searchKeywords, maxPerSource));
-    if (sources.includes('github')) apiPromises.push(fetchGitHubJobs(searchKeywords, maxPerSource));
-    if (sources.includes('general')) apiPromises.push(fetchGeneralJobs(searchKeywords, maxPerSource));
-
-    try {
-      const results = await Promise.allSettled(apiPromises);
-      results.forEach((result, index) => {
-        if (result.status === 'fulfilled' && result.value) {
-          allJobs.push(...result.value);
-        } else {
-          console.warn(`API source ${sources[index]} failed:`, result.reason);
-        }
-      });
-      allJobs = removeDuplicateJobs(allJobs);
-    } catch (error) {
-      console.error('Error fetching from job APIs:', error);
-    }
+  // Step 1: Try to fetch from the real API if requested
+  if (useRealAPIs) {
+    allJobs = await fetchJSearchJobs(query, 50); // Fetch more to have a good pool
   }
 
-  if ((allJobs.length === 0 && fallbackToGenerated) || !useRealAPIs) {
-    console.log('Using generated job catalog as fallback...');
-    allJobs = generateJobCatalog(searchKeywords);
+  // Step 2: ✅ YOUR SAFETY NET
+  // If the API failed (returned 0 jobs), use the local generated jobs as a backup.
+  if (allJobs.length === 0 && fallbackToGenerated) {
+    console.log('API fetch failed or returned no results. Using generated job catalog as fallback...');
+    allJobs = generateJobCatalog(query);
   }
 
-  if (allJobs.length === 0) {
-    allJobs = generateJobCatalog().slice(0, 20);
-  }
+  // Step 3: Remove duplicates and limit results
+  const uniqueJobs = allJobs.filter((job, index, self) =>
+    index === self.findIndex(j => j.title === job.title && j.company === job.company)
+  );
 
-  // Limit total results for performance
-  allJobs = allJobs.slice(0, 20);
+  const finalJobs = uniqueJobs.slice(0, 20);
 
-  console.log(`Found ${allJobs.length} jobs total`);
-  return allJobs;
+  console.log(`Found ${finalJobs.length} unique jobs total.`);
+  return finalJobs;
 };

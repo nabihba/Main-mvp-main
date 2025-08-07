@@ -6,215 +6,212 @@ import { fetchJobs } from './jobService';
 import { testGenerators } from './testGenerators';
 
 // TODO: Replace with your actual Gemini API Key.
-// IMPORTANT: This is not secure for a production app.
 const API_KEY = 'AIzaSyBGVZhZ3jxOrYEaCQH5oPGu_14_sojjmEo';
 
 const genAI = new GoogleGenerativeAI(API_KEY);
 const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-const getAiRecommendations = async (userData, courseCatalog, jobListings) => {
-  console.log('AI Service: Analyzing user profile...');
+/**
+ * Enhanced user profile extraction that captures ALL questionnaire data
+ */
+const extractUserProfile = (userData) => {
+  console.log('Extracting complete user profile:', userData);
   
-  // Extract relevant information from the new questionnaire structure
-  const careerGoal = userData.careerGoal || '';
-  const employmentStatus = userData.employmentStatus || '';
-  const experience = userData.experience || '';
-  const university = userData.university || '';
-  const fieldExperience = userData.fieldExperience || [];
-  const desiredField = userData.desiredField || [];
-  const dreamJob = userData.dreamJob || '';
-  const remoteCountries = userData.remoteCountries || [];
-  
-  // Convert field experience and desired field to strings
-  const fieldExperienceStr = Array.isArray(fieldExperience) 
-    ? Object.keys(fieldExperience).join(', ')
-    : fieldExperience;
-  const desiredFieldStr = Array.isArray(desiredField)
-    ? Object.keys(desiredField).join(', ')
-    : desiredField;
-  
-  // Create detailed analysis of user profile
-  const userProfile = {
-    careerGoal,
-    employmentStatus,
-    experience,
-    university,
-    fieldExperience: fieldExperienceStr,
-    desiredField: desiredFieldStr,
-    dreamJob,
-    remoteCountries: remoteCountries.join(', ')
+  // Extract all possible fields from questionnaire
+  const profile = {
+    // Basic info
+    firstName: userData.firstName || '',
+    lastName: userData.lastName || '',
+    region: userData.region || '',
+    university: userData.university || '',
+    
+    // Career-related fields
+    careerGoal: userData.careerGoal || '',
+    dreamJob: userData.dreamJob || '',
+    employmentStatus: userData.employmentStatus || '',
+    experience: userData.experience || '',
+    
+    // Skills and interests (these might be objects or arrays)
+    fieldExperience: userData.fieldExperience || {},
+    desiredField: userData.desiredField || {},
+    technicalSkills: userData.technicalSkills || [],
+    softSkills: userData.softSkills || [],
+    interests: userData.interests || [],
+    careerGoals: userData.careerGoals || [], // different from careerGoal
+    
+    // Work preferences
+    workPreferences: userData.workPreferences || {},
+    remoteCountries: userData.remoteCountries || [],
+    salaryExpectations: userData.salaryExpectations || '',
+    
+    // Education details
+    degreeLevel: userData.degreeLevel || '',
+    fieldOfStudy: userData.fieldOfStudy || '',
+    specialization: userData.specialization || '',
+    graduationYear: userData.graduationYear || '',
+    
+    // Additional fields that might exist
+    currentRole: userData.currentRole || '',
+    yearsOfExperience: userData.yearsOfExperience || 0,
+    certifications: userData.certifications || [],
+    languages: userData.languages || []
   };
+
+  // Convert object fields to readable strings
+  if (typeof profile.fieldExperience === 'object') {
+    profile.fieldExperienceStr = Object.keys(profile.fieldExperience)
+      .filter(key => profile.fieldExperience[key])
+      .join(', ');
+  } else {
+    profile.fieldExperienceStr = profile.fieldExperience;
+  }
+
+  if (typeof profile.desiredField === 'object') {
+    profile.desiredFieldStr = Object.keys(profile.desiredField)
+      .filter(key => profile.desiredField[key])
+      .join(', ');
+  } else {
+    profile.desiredFieldStr = profile.desiredField;
+  }
+
+  if (typeof profile.workPreferences === 'object') {
+    profile.workPreferencesStr = Object.keys(profile.workPreferences)
+      .filter(key => profile.workPreferences[key])
+      .join(', ');
+  } else {
+    profile.workPreferencesStr = profile.workPreferences;
+  }
+
+  // Create priority keywords for search
+  const priorityKeywords = [];
   
-  console.log('Detailed user profile for AI analysis:', userProfile);
+  // High priority: Dream job and desired field
+  if (profile.dreamJob) priorityKeywords.push(profile.dreamJob);
+  if (profile.desiredFieldStr) priorityKeywords.push(profile.desiredFieldStr);
+  if (profile.specialization) priorityKeywords.push(profile.specialization);
   
+  // Medium priority: Field experience and technical skills
+  if (profile.fieldExperienceStr) priorityKeywords.push(profile.fieldExperienceStr);
+  if (Array.isArray(profile.technicalSkills)) {
+    priorityKeywords.push(...profile.technicalSkills);
+  }
+  
+  // Lower priority: Career goals and interests
+  if (profile.careerGoal) priorityKeywords.push(profile.careerGoal);
+  if (Array.isArray(profile.interests)) {
+    priorityKeywords.push(...profile.interests);
+  }
+
+  profile.searchKeywords = priorityKeywords.join(' ');
+  
+  console.log('Extracted profile with keywords:', profile.searchKeywords);
+  return profile;
+};
+
+/**
+ * Enhanced AI recommendations with stricter matching
+ */
+const getAiRecommendations = async (userData, courseCatalog, jobListings) => {
+  console.log('AI Service: Analyzing user profile with enhanced logic...');
+  
+  const profile = extractUserProfile(userData);
+  
+  // Create a more detailed and strict prompt
   const prompt = `
-    You are an expert career advisor specializing in the Middle East and North Africa region, particularly Palestine and the West Bank.
+    You are an expert career advisor with deep knowledge of the Palestinian job market and regional opportunities in the Middle East.
     
-    Analyze the user's profile and select the top 3 courses AND the top 3 jobs that are the best fit for their specific situation.
+    CRITICAL INSTRUCTIONS - READ CAREFULLY:
+    1. You MUST prioritize relevance over everything else
+    2. If a user wants to be an "AI Consultant" - recommend AI, ML, data science courses/jobs
+    3. If they have "Software Engineer" experience - build on that with advanced programming, architecture, etc.
+    4. DO NOT recommend stress management, general business, or unrelated courses unless they specifically align
+    5. Score relevance strictly - irrelevant recommendations get 0-20 scores
     
-    USER PROFILE ANALYSIS:
-    - Career Goal: "${careerGoal}" - This indicates their primary motivation
-    - Employment Status: "${employmentStatus}" - This shows their current situation
-    - Prior Experience: "${experience}" - This indicates their educational background
-    - University: "${university}" - This shows their academic institution and make sure to check about the university information
-    - Field Experience: "${fieldExperienceStr}" - This shows their practical experience areas
-    - Desired Work Fields: "${desiredFieldStr}" - This shows where they want to work
-    - Dream Job: "${dreamJob}" - This is their ultimate career goal
-    - Remote Work Countries: "${remoteCountries.join(', ')}" - This shows their geographic preferences
+    USER PROFILE DETAILED ANALYSIS:
+    
+    DREAM JOB: "${profile.dreamJob}" 
+    ⭐ THIS IS THE MOST IMPORTANT FACTOR - Match this above all else
+    
+    FIELD EXPERIENCE: "${profile.fieldExperienceStr}"
+    ⭐ Build on existing experience, don't ignore it
+    
+    DESIRED WORK FIELDS: "${profile.desiredFieldStr}"
+    ⭐ Must align with these preferences
+    
+    TECHNICAL SKILLS: ${JSON.stringify(profile.technicalSkills)}
+    ⭐ Expand these skills, don't recommend basic versions of what they know
+    
+    Additional Context:
+    - Career Goal: "${profile.careerGoal}"
+    - Employment Status: "${profile.employmentStatus}"
+    - Education Level: "${profile.experience}"
+    - University: "${profile.university}"
+    - Specialization: "${profile.specialization}"
+    - Current Role: "${profile.currentRole}"
+    - Years Experience: ${profile.yearsOfExperience}
+    - Region: "${profile.region}"
+    - Work Preferences: "${profile.workPreferencesStr}"
 
-    CONTEXT CONSIDERATIONS:
-    1. If they're unemployed, prioritize courses that lead to immediate employment
-    2. If they're employed but unsatisfied, focus on career advancement courses
-    3. If they have field experience, recommend jobs that build on that experience
-    4. If they have a dream job, recommend courses that directly support that goal
-    5. Consider the Palestinian context and regional opportunities
-    6. Focus on practical, skill-based courses that lead to tangible outcomes
-    7. Recommend jobs that match their experience level and desired fields
+    EXAMPLE MATCHING LOGIC:
+    - If dream job = "AI Consultant" → Look for: AI, Machine Learning, Data Science, Python, TensorFlow, etc.
+    - If experience = "Software Engineer" → Look for: Advanced Programming, System Design, Cloud Architecture, etc.
+    - If they know React → Recommend: Advanced React, Node.js, Full Stack, not basic web development
+    
+    STRICT RELEVANCE RULES:
+    ❌ DO NOT recommend stress management, leadership, general business unless specifically relevant
+    ❌ DO NOT recommend beginner courses if they have advanced experience
+    ❌ DO NOT recommend courses outside their field unless they explicitly want career change
+    ✅ DO recommend courses that directly advance their dream job
+    ✅ DO recommend jobs that match their experience level and desired field
+    ✅ DO consider Palestinian/regional market opportunities
 
-    AVAILABLE COURSES (with their IDs and categories):
-    ---
+    AVAILABLE COURSES:
     ${JSON.stringify(courseCatalog.map(c => ({ 
       id: c.id, 
       title: c.title, 
       provider: c.provider, 
       skills: c.skills,
-      category: c.category || 'General'
-    })))}
-    ---
+      category: c.category,
+      level: c.level,
+      description: c.description?.substring(0, 100)
+    })), null, 2)}
 
-    AVAILABLE JOBS (with their IDs and categories):
-    ---
+    AVAILABLE JOBS:
     ${JSON.stringify(jobListings.map(j => ({ 
       id: j.id, 
       title: j.title, 
       company: j.company, 
       category: j.category,
       level: j.level,
-      workType: j.workType
-    })))}n
-    ---
+      workType: j.workType,
+      location: j.location,
+      description: j.description?.substring(0, 100)
+    })), null, 2)}
 
-    INSTRUCTIONS:
-    1. Analyze the user's profile thoroughly
-    2. Match courses to their career goals and current situation
-    3. Match jobs to their experience level and desired fields
-    4. Consider regional context and opportunities
-    5. Prioritize practical, actionable recommendations
-    6. Return a single, valid JSON object with two keys: "recommendedCourseIds" and "recommendedJobIds"
-    7. Each key must contain an array of the top 3 STRING IDs from the respective lists
-    8. The output must be only the JSON object and nothing else
-    9. If no good matches exist, select the most relevant general options
-  `;
+    MATCHING PROCESS:
+    1. First, find courses/jobs that directly match dream job "${profile.dreamJob}"
+    2. Second, find items that build on field experience "${profile.fieldExperienceStr}"  
+    3. Third, consider desired fields "${profile.desiredFieldStr}"
+    4. Calculate strict relevance scores (0-100)
+    5. Only select items with score > 70 for recommendations
+    6. If no items score > 70, select best available but note the low relevance
 
-  try {
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
-    const cleanedResponse = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
-    const recommendations = JSON.parse(cleanedResponse);
-    
-    console.log('AI Recommendations:', recommendations);
-    return recommendations;
-  } catch (error) {
-    console.error("Gemini API Error:", error);
-    // ✅ Return empty arrays on failure to prevent crashes
-    return { recommendedCourseIds: [], recommendedJobIds: [] };
-  }
-};
-
-// ✅ NEW: Detailed AI analysis for individual course/job
-export const getDetailedAiAnalysis = async (item, userData, type = 'course') => {
-  console.log(`Getting detailed AI analysis for ${type}:`, item?.title);
-  
-  if (!item || !userData) {
-    console.error('Missing item or userData for AI analysis');
-    return null;
-  }
-
-  // Extract user profile data
-  const careerGoal = userData.careerGoal || '';
-  const employmentStatus = userData.employmentStatus || '';
-  const experience = userData.experience || '';
-  const university = userData.university || '';
-  const fieldExperience = userData.fieldExperience || {};
-  const desiredField = userData.desiredField || {};
-  const dreamJob = userData.dreamJob || '';
-  const region = userData.region || '';
-  
-  // Convert objects to readable strings
-  const fieldExperienceStr = typeof fieldExperience === 'object' 
-    ? Object.keys(fieldExperience).filter(key => fieldExperience[key]).join(', ')
-    : fieldExperience;
-  const desiredFieldStr = typeof desiredField === 'object'
-    ? Object.keys(desiredField).filter(key => desiredField[key]).join(', ')
-    : desiredField;
-
-  const prompt = `
-    You are an expert career advisor specializing in the Palestinian and West Bank context. 
-    
-    Analyze this ${type} for a specific user and provide detailed, personalized insights.
-    
-    ${type.toUpperCase()} DETAILS:
-    - Title: "${item.title || 'N/A'}"
-    - ${type === 'course' ? 'Provider' : 'Company'}: "${item.provider || item.company || 'N/A'}"
-    - Description: "${item.description || 'No description available'}"
-    - ${type === 'course' ? 'Duration' : 'Level'}: "${item.duration || item.level || 'N/A'}"
-    - ${type === 'course' ? 'Skills' : 'Requirements'}: "${item.skills?.join(', ') || item.requirements || 'N/A'}"
-    - Category: "${item.category || 'General'}"
-    ${type === 'job' ? `- Work Type: "${item.workType || 'N/A'}"` : ''}
-    ${type === 'job' ? `- Location: "${item.location || 'N/A'}"` : ''}
-
-    USER PROFILE:
-    - Career Goal: "${careerGoal}"
-    - Current Status: "${employmentStatus}"
-    - Education Level: "${experience}"
-    - University: "${university}"
-    - Field Experience: "${fieldExperienceStr}"
-    - Desired Fields: "${desiredFieldStr}"
-    - Dream Job: "${dreamJob}"
-    - Region: "${region}"
-
-    ANALYSIS REQUIREMENTS:
-    1. Provide a clear, concise summary of what this ${type} offers (2-3 sentences)
-    2. Explain specifically why this ${type} is good or not good for THIS user based on their profile
-    3. Calculate a relevance score (0-100) based on how well it matches their goals and background
-    4. List 3-5 key benefits this ${type} would provide to them personally
-    5. Identify specific skills they would gain that align with their career goals
-    6. Explain how this fits into their career progression toward their dream job
-    7. Consider the Palestinian/West Bank context and regional opportunities
-    8. Be honest - if it's not a great match, explain why and suggest what would be better
-
-    Return ONLY a valid JSON object with this exact structure:
+    REQUIRED OUTPUT FORMAT (JSON only, no other text):
     {
-      "summary": "Brief 2-3 sentence summary of the ${type}",
-      "personalizedRecommendation": "Detailed explanation of why this is good/bad for this specific user",
-      "relevanceScore": [CALCULATE A NUMBER BETWEEN 0-100 BASED ON ACTUAL MATCH WITH USER PROFILE],
-      "keyBenefits": ["benefit1", "benefit2", "benefit3"],
-      "skillsGained": ["skill1", "skill2", "skill3"],
-      "careerProgression": "How this fits into their path to their dream job",
-      "regionalContext": "Specific relevance to Palestinian/West Bank opportunities",
-      "honestAssessment": "Frank assessment of whether this is worth their time and why"
+      "recommendedCourseIds": ["id1", "id2", "id3"],
+      "recommendedJobIds": ["id1", "id2", "id3"],
+      "reasoning": {
+        "dreamJobAlignment": "Explanation of how selections align with dream job",
+        "experienceBuilding": "How selections build on existing experience", 
+        "relevanceScores": {
+          "courses": [score1, score2, score3],
+          "jobs": [score1, score2, score3]
+        },
+        "warnings": "Any concerns about match quality"
+      }
     }
-
-    IMPORTANT FOR RELEVANCE SCORE:
-    - Score 90-100: Perfect match for user's career goals, experience, and desired fields
-    - Score 75-89: Very good match with most criteria aligned
-    - Score 60-74: Good match with some criteria aligned
-    - Score 45-59: Moderate match, some relevance but not ideal
-    - Score 30-44: Low match, minimal relevance
-    - Score 0-29: Poor match, not recommended for this user
     
-    Calculate the score based on:
-    1. How well it matches their career goal and dream job (40% weight)
-    2. Alignment with their field experience and desired fields (30% weight)
-    3. Appropriate for their education/experience level (20% weight)
-    4. Relevance to regional opportunities (10% weight)
-    
-    BE STRICT WITH SCORING - If a ${type} is not relevant to the user's profile, give it a low score!
-    For example:
-    - Food course for software engineer = 5-15%
-    - Art course for business student = 10-20%
-    - Advanced ML course for beginner = 20-30%
-    - Perfect career match = 85-95%
+    REMEMBER: If dream job is "AI Consultant" and you recommend a stress management course, that's a failure. Be strict and relevant!
   `;
 
   try {
@@ -223,6 +220,194 @@ export const getDetailedAiAnalysis = async (item, userData, type = 'course') => 
     const cleanedResponse = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
     
     console.log('Raw AI response:', cleanedResponse);
+    const recommendations = JSON.parse(cleanedResponse);
+    
+    console.log('AI Recommendations with reasoning:', recommendations);
+    
+    // Validate that we have actual IDs
+    if (!recommendations.recommendedCourseIds || !recommendations.recommendedJobIds) {
+      throw new Error('Invalid recommendation format from AI');
+    }
+    
+    return recommendations;
+    
+  } catch (error) {
+    console.error("Enhanced AI recommendation failed:", error);
+    
+    // Smart fallback based on user profile
+    console.log('Using smart fallback recommendations...');
+    return createSmartFallback(profile, courseCatalog, jobListings);
+  }
+};
+
+/**
+ * Smart fallback that uses profile matching when AI fails
+ */
+const createSmartFallback = (profile, courseCatalog, jobListings) => {
+  console.log('Creating smart fallback recommendations for:', profile.dreamJob);
+  
+  // Create keyword matching function
+  const scoreRelevance = (item, type) => {
+    let score = 0;
+    // ✅ **FIX:** Added a fallback for item.title
+    const itemText = `${item.title || ''} ${item.description || ''} ${item.category || ''}`.toLowerCase();
+    
+    // High priority matching (dream job, specialization)
+    // ✅ **FIX:** Added fallbacks to ensure we only try to lowercase strings.
+    const highPriorityTerms = [
+      (profile.dreamJob || '').toLowerCase(),
+      (profile.specialization || '').toLowerCase(),
+      ...(profile.desiredFieldStr || '').toLowerCase().split(',').map(s => s.trim())
+    ].filter(Boolean); // .filter(Boolean) removes any empty strings
+    
+    for (const term of highPriorityTerms) {
+      if (term && itemText.includes(term)) score += 30;
+    }
+    
+    // Medium priority (field experience, technical skills)
+    const mediumPriorityTerms = [
+      ...(profile.fieldExperienceStr || '').toLowerCase().split(',').map(s => s.trim()),
+      ...(profile.technicalSkills || []).map(s => (s || '').toLowerCase())
+    ].filter(Boolean);
+    
+    for (const term of mediumPriorityTerms) {
+      if (term && itemText.includes(term)) score += 20;
+    }
+    
+    // Bonus for exact title matches
+    if ((profile.dreamJob || '') && itemText.includes((profile.dreamJob || '').toLowerCase())) score += 25;
+    
+    return Math.min(score, 100);
+  };
+  
+  // Score and sort courses
+  const scoredCourses = courseCatalog.map(course => ({
+    ...course,
+    score: scoreRelevance(course, 'course')
+  })).sort((a, b) => b.score - a.score);
+  
+  // Score and sort jobs  
+  const scoredJobs = jobListings.map(job => ({
+    ...job,
+    score: scoreRelevance(job, 'job')
+  })).sort((a, b) => b.score - a.score);
+  
+  console.log('Top courses by score:', scoredCourses.slice(0, 3).map(c => ({ title: c.title, score: c.score })));
+  console.log('Top jobs by score:', scoredJobs.slice(0, 3).map(j => ({ title: j.title, score: j.score })));
+  
+  return {
+    recommendedCourseIds: scoredCourses.slice(0, 3).map(c => c.id),
+    recommendedJobIds: scoredJobs.slice(0, 3).map(j => j.id),
+    reasoning: {
+      dreamJobAlignment: `Fallback matching based on dream job: ${profile.dreamJob}`,
+      experienceBuilding: `Building on experience in: ${profile.fieldExperienceStr}`,
+      relevanceScores: {
+        courses: scoredCourses.slice(0, 3).map(c => c.score),
+        jobs: scoredJobs.slice(0, 3).map(j => j.score)
+      },
+      warnings: "Using fallback algorithm - AI analysis failed"
+    }
+  };
+};
+
+/**
+ * Enhanced course/job search with better keyword generation
+ */
+const generateSearchKeywords = (userData) => {
+  const profile = extractUserProfile(userData);
+  
+  // Build hierarchical keywords
+  const keywords = [];
+  
+  // Priority 1: Dream job (most important)
+  if (profile.dreamJob) {
+    keywords.push(profile.dreamJob);
+    
+    // Add related terms for common roles
+    const dreamJobLower = profile.dreamJob.toLowerCase();
+    if (dreamJobLower.includes('ai') || dreamJobLower.includes('artificial intelligence')) {
+      keywords.push('machine learning', 'data science', 'python', 'tensorflow');
+    }
+    if (dreamJobLower.includes('consultant')) {
+      keywords.push('consulting', 'strategy', 'analysis');
+    }
+    if (dreamJobLower.includes('software') || dreamJobLower.includes('developer')) {
+      keywords.push('programming', 'coding', 'development');
+    }
+  }
+  
+  // Priority 2: Specialization and desired field
+  if (profile.specialization) keywords.push(profile.specialization);
+  if (profile.desiredFieldStr) keywords.push(profile.desiredFieldStr);
+  
+  // Priority 3: Technical skills and field experience
+  if (profile.technicalSkills) keywords.push(...profile.technicalSkills);
+  if (profile.fieldExperienceStr) keywords.push(profile.fieldExperienceStr);
+  
+  const finalKeywords = keywords.filter(Boolean).join(' ');
+  console.log('Generated search keywords:', finalKeywords);
+  return finalKeywords;
+};
+
+// Enhanced detailed AI analysis (keeping your existing function but with better profile extraction)
+export const getDetailedAiAnalysis = async (item, userData, type = 'course') => {
+  console.log(`Getting detailed AI analysis for ${type}:`, item?.title);
+  
+  if (!item || !userData) {
+    console.error('Missing item or userData for AI analysis');
+    return null;
+  }
+
+  const profile = extractUserProfile(userData);
+
+  const prompt = `
+    You are an expert career advisor specializing in the Palestinian and Middle Eastern context. 
+    
+    Analyze this ${type} for a user who wants to become an "${profile.dreamJob}" and has experience in "${profile.fieldExperienceStr}".
+    
+    ${type.toUpperCase()} DETAILS:
+    - Title: "${item.title || 'N/A'}"
+    - ${type === 'course' ? 'Provider' : 'Company'}: "${item.provider || item.company || 'N/A'}"
+    - Description: "${item.description || 'No description available'}"
+    - Category: "${item.category || 'General'}"
+    - Skills/Requirements: "${(item.skills || []).join(', ') || 'N/A'}"
+
+    USER PROFILE:
+    - Dream Job: "${profile.dreamJob}" (MOST IMPORTANT)
+    - Field Experience: "${profile.fieldExperienceStr}"
+    - Technical Skills: ${JSON.stringify(profile.technicalSkills)}
+    - Desired Fields: "${profile.desiredFieldStr}"
+    - Specialization: "${profile.specialization}"
+    - Current Status: "${profile.employmentStatus}"
+    - Region: "${profile.region}"
+
+    STRICT RELEVANCE SCORING:
+    - 90-100: Perfect match for dream job and builds on experience
+    - 75-89: Very relevant to career goals with good skill alignment  
+    - 60-74: Moderately relevant, some alignment
+    - 45-59: Limited relevance, tangential connection
+    - 30-44: Low relevance, minimal connection
+    - 0-29: Not relevant, wrong field/level
+
+    BE BRUTALLY HONEST about relevance. If a stress management course is recommended for someone wanting to be an AI consultant, score it 5-15!
+
+    Return ONLY valid JSON:
+    {
+      "summary": "Brief 2-3 sentence summary",
+      "personalizedRecommendation": "Detailed explanation of relevance to user's dream job and experience",
+      "relevanceScore": [NUMBER 0-100 based on STRICT criteria above],
+      "keyBenefits": ["benefit1", "benefit2", "benefit3"],
+      "skillsGained": ["skill1", "skill2", "skill3"],
+      "careerProgression": "How this helps achieve dream job: ${profile.dreamJob}",
+      "regionalContext": "Relevance to Palestinian/Middle Eastern opportunities",
+      "honestAssessment": "Frank assessment with specific reasoning for score"
+    }
+  `;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const responseText = result.response.text();
+    const cleanedResponse = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
     
     const analysis = JSON.parse(cleanedResponse);
     
@@ -232,116 +417,111 @@ export const getDetailedAiAnalysis = async (item, userData, type = 'course') => 
     analysis.userId = userData.uid;
     analysis.type = type;
     
-    console.log('Detailed AI analysis completed:', analysis);
+    console.log(`Detailed analysis for ${item.title}: Score ${analysis.relevanceScore}/100`);
     return analysis;
     
   } catch (error) {
     console.error('Detailed AI analysis failed:', error);
-    
-    // Fallback analysis
-    return {
-      summary: `This ${type} covers ${item.title}. ${item.description?.substring(0, 100) || 'More details available in full description.'}`,
-      personalizedRecommendation: `This ${type} may be relevant to your career goals. Consider reviewing the full details to see if it aligns with your background in ${fieldExperienceStr || 'your field'}.`,
-      relevanceScore: 50,
-      keyBenefits: ['Professional development', 'Skill enhancement', 'Career advancement'],
-      skillsGained: item.skills?.slice(0, 3) || ['Various professional skills'],
-      careerProgression: 'This could contribute to your overall professional development.',
-      regionalContext: 'Consider local market demand and opportunities in your region.',
-      honestAssessment: 'Unable to provide detailed analysis at this time. Please review the course details manually.',
-      analyzedAt: new Date().toISOString(),
-      itemId: item.id,
-      userId: userData.uid,
-      type: type,
-      source: 'fallback'
-    };
+    // ✅ **FIX:** Pass `userData` to the fallback function
+    return createFallbackAnalysis(item, profile, type, userData);
   }
 };
 
+/**
+ * Enhanced main analysis function
+ */
 export const runFullAiAnalysis = async (userData) => {
-  console.log('Running full AI analysis for user:', userData.uid);
+  console.log('Running ENHANCED AI analysis for user:', userData.uid);
   try {
-    // Use the new questionnaire structure to get search keywords
-    let searchKeywords = 'professional development';
-    
-    console.log('User data for AI analysis:', {
-      careerGoal: userData.careerGoal,
-      fieldExperience: userData.fieldExperience,
-      desiredField: userData.desiredField,
-      experience: userData.experience,
-      employmentStatus: userData.employmentStatus
-    });
-    
-    if (userData.fieldExperience && Object.keys(userData.fieldExperience).length > 0) {
-      searchKeywords = Object.keys(userData.fieldExperience).join(' ');
-    } else if (userData.desiredField && Object.keys(userData.desiredField).length > 0) {
-      searchKeywords = Object.keys(userData.desiredField).join(' ');
-    } else if (userData.careerGoal) {
-      searchKeywords = userData.careerGoal;
-    }
+    const profile = extractUserProfile(userData);
+    const searchKeywords = generateSearchKeywords(userData);
 
-    console.log('Search keywords:', searchKeywords);
+    console.log('Using enhanced search keywords:', searchKeywords);
 
+    // Fetch more targeted data
     const [courseCatalog, jobListings] = await Promise.all([
-      fetchCourses(searchKeywords),
-      fetchJobs(searchKeywords)
+      fetchCourses(searchKeywords, {
+        useRealAPIs: true, // Set to true when APIs are configured
+        sources: ['udemy', 'coursera', 'classcentral'],
+        maxPerSource : 20,
+        fallbackToGenerated: true
+      }),
+      fetchJobs(searchKeywords, {
+        useRealAPIs: false, // Set to true when APIs are configured  
+        sources: ['indeed', 'linkedin', 'general'],
+        maxPerSource: 20,
+        fallbackToGenerated: true
+      })
     ]);
 
-    // ✅ We no longer throw an error if one API fails. We proceed with what we have.
-    console.log(`Found ${courseCatalog.length} courses and ${jobListings.length} jobs.`);
+    console.log(`Enhanced fetch: ${courseCatalog.length} courses, ${jobListings.length} jobs`);
 
-    // If AI fails, return some default recommendations
-    let recommendedCourses = [];
-    let recommendedJobs = [];
+    // Get AI recommendations with enhanced logic
+    const recommendations = await getAiRecommendations(userData, courseCatalog, jobListings);
+    
+    // Map IDs to actual objects
+    const recommendedCourses = (recommendations.recommendedCourseIds || []).map(id => 
+      courseCatalog.find(course => course.id === id)
+    ).filter(Boolean);
 
-    try {
-      const recommendedIds = await getAiRecommendations(userData, courseCatalog, jobListings);
-      console.log('AI recommended IDs:', recommendedIds);
-      
-      recommendedCourses = (recommendedIds.recommendedCourseIds || []).map(id => 
-        courseCatalog.find(course => course.id === id)
-      ).filter(Boolean); 
+    const recommendedJobs = (recommendations.recommendedJobIds || []).map(id =>
+      jobListings.find(job => job.id === id)
+    ).filter(Boolean);
 
-      recommendedJobs = (recommendedIds.recommendedJobIds || []).map(id =>
-        jobListings.find(job => job.id === id)
-      ).filter(Boolean);
-      
-      console.log('Found recommended courses:', recommendedCourses.length);
-      console.log('Found recommended jobs:', recommendedJobs.length);
-    } catch (aiError) {
-      console.error("AI recommendation failed, using fallback:", aiError);
-      // Fallback: use test generators to ensure we have data
-      const testData = testGenerators();
-      recommendedCourses = testData.courses;
-      recommendedJobs = testData.jobs;
-      console.log('Using test generators - courses:', recommendedCourses.length, 'jobs:', recommendedJobs.length);
-    }
+    console.log('Final enhanced recommendations:');
+    console.log('Courses:', recommendedCourses.map(c => ({ title: c.title, id: c.id })));
+    console.log('Jobs:', recommendedJobs.map(j => ({ title: j.title, id: j.id })));
+    console.log('AI Reasoning:', recommendations.reasoning);
 
+    // Save to Firebase
     const userDocRef = doc(db, 'users', userData.uid);
     await updateDoc(userDocRef, {
       recommendedCourses,
       recommendedJobs,
       analysisComplete: true,
       lastAnalysisDate: new Date(),
+      analysisReasoning: recommendations.reasoning // Save the AI's reasoning
     });
 
-    // Ensure we always have some recommendations
-    if (recommendedCourses.length === 0 && courseCatalog.length > 0) {
-      console.log('No AI courses, using first 3 from catalog');
-      recommendedCourses = courseCatalog.slice(0, 3);
-    }
-    
-    if (recommendedJobs.length === 0 && jobListings.length > 0) {
-      console.log('No AI jobs, using first 3 from listings');
-      recommendedJobs = jobListings.slice(0, 3);
-    }
-    
-    console.log('Final recommendations - courses:', recommendedCourses.length, 'jobs:', recommendedJobs.length);
-    console.log('AI analysis and save complete.');
-    return { recommendedCourses, recommendedJobs };
+    return { 
+      recommendedCourses, 
+      recommendedJobs,
+      reasoning: recommendations.reasoning 
+    };
 
   } catch (error) {
-    console.error("Error during full AI analysis:", error);
-    // ✅ Return empty arrays on failure
-    return { recommendedCourses: [], recommendedJobs: [] };
+    console.error("Enhanced AI analysis failed:", error);
+    return { recommendedCourses: [], recommendedJobs: [], reasoning: null };
   }
+};
+
+/**
+ * Fallback analysis when detailed AI fails
+ */
+// ✅ **FIX:** Add `userData` to the function signature to access `userData.uid`
+const createFallbackAnalysis = (item, profile, type, userData) => {
+  // Simple keyword matching for fallback
+  const itemText = `${item.title || ''} ${item.description || ''}`.toLowerCase();
+  const dreamJobText = (profile.dreamJob || '').toLowerCase();
+  
+  let score = 30; // Default moderate score
+  if (dreamJobText && itemText.includes(dreamJobText)) score = 75;
+  else if ((profile.technicalSkills || []).some(skill => itemText.includes((skill || '').toLowerCase()))) score = 60;
+  else if (profile.fieldExperienceStr && itemText.includes((profile.fieldExperienceStr || '').toLowerCase())) score = 55;
+  
+  return {
+    summary: `This ${type} covers ${item.title || 'N/A'}. ${item.description?.substring(0, 100) || 'More details available.'}`,
+    personalizedRecommendation: `Based on your goal to become ${profile.dreamJob || 'your desired role'}, this ${type} may${score > 50 ? '' : ' not'} be directly relevant to your career path.`,
+    relevanceScore: score,
+    keyBenefits: item.skills?.slice(0, 3) || ['Professional development', 'Skill enhancement', 'Career advancement'],
+    skillsGained: item.skills?.slice(0, 3) || ['Various professional skills'],
+    careerProgression: `This ${score > 50 ? 'aligns with' : 'may tangentially support'} your path to becoming ${profile.dreamJob || 'your desired role'}.`,
+    regionalContext: 'Consider local market demand and opportunities in your region.',
+    honestAssessment: `Fallback analysis suggests ${score > 60 ? 'good' : score > 40 ? 'moderate' : 'limited'} relevance to your career goals.`,
+    analyzedAt: new Date().toISOString(),
+    itemId: item.id,
+    userId: userData?.uid || 'unknown', // Safely access uid
+    type: type,
+    source: 'fallback'
+  };
 };
