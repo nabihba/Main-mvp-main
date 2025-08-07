@@ -53,42 +53,50 @@ const generateJobCatalog = (searchKeywords = '') => {
   const jobTemplates = [
     {
       titleTemplates: ['Frontend Developer', 'React Developer', 'UI/UX Developer', 'Web Developer'],
-      companies: ['Microsoft', 'Google', 'Meta', 'Apple', 'Amazon', 'Netflix', 'Spotify', 'Airbnb'],
+      companies: ['Careem', 'Noon', 'Souq', 'Talabat', 'Deliveroo', 'Uber', 'Amazon', 'Microsoft', 'Google', 'Meta', 'Apple'],
       categories: ['Software Engineering', 'Web Development', 'Frontend'],
       skills: ['JavaScript', 'React', 'HTML', 'CSS', 'TypeScript', 'Node.js'],
-      locations: ['Remote', 'New York', 'San Francisco', 'London', 'Berlin', 'Tel Aviv'],
+      locations: ['Dubai', 'Abu Dhabi', 'Riyadh', 'Jeddah', 'Doha', 'Kuwait City', 'Manama', 'Muscat', 'Sharjah', 'Remote'],
       workTypes: ['Full-time', 'Part-time', 'Contract', 'Remote']
     },
     {
       titleTemplates: ['Backend Developer', 'Full Stack Developer', 'Software Engineer', 'Node.js Developer'],
-      companies: ['Uber', 'Slack', 'Dropbox', 'Salesforce', 'Oracle', 'IBM', 'Adobe', 'Zoom'],
+      companies: ['STC', 'Etisalat', 'Ooredoo', 'Zain', 'Mobily', 'Vodafone', 'Oracle', 'IBM', 'SAP', 'Salesforce', 'Adobe'],
       categories: ['Software Engineering', 'Backend Development', 'Full Stack'],
-      skills: ['Node.js', 'Python', 'Java', 'MongoDB', 'PostgreSQL', 'AWS'],
-      locations: ['Remote', 'Seattle', 'Austin', 'Toronto', 'Amsterdam', 'Dublin'],
+      skills: ['Node.js', 'Python', 'Java', 'MongoDB', 'PostgreSQL', 'AWS', 'Azure'],
+      locations: ['Dubai', 'Abu Dhabi', 'Riyadh', 'Jeddah', 'Doha', 'Kuwait City', 'Manama', 'Muscat', 'Sharjah', 'Remote'],
       workTypes: ['Full-time', 'Contract', 'Remote']
     },
     {
       titleTemplates: ['Data Scientist', 'Data Analyst', 'Machine Learning Engineer', 'AI Engineer'],
-      companies: ['Tesla', 'OpenAI', 'DeepMind', 'Palantir', 'Snowflake', 'DataBricks'],
+      companies: ['Mubadala', 'PIF', 'QIA', 'KIA', 'ADIA', 'SABIC', 'Aramco', 'ADNOC', 'Qatar Petroleum', 'Kuwait Petroleum'],
       categories: ['Data Science', 'Machine Learning', 'Analytics'],
-      skills: ['Python', 'R', 'SQL', 'TensorFlow', 'PyTorch', 'Pandas'],
-      locations: ['Remote', 'Palo Alto', 'Boston', 'Chicago', 'Montreal', 'Singapore'],
+      skills: ['Python', 'R', 'SQL', 'TensorFlow', 'PyTorch', 'Pandas', 'Scikit-learn'],
+      locations: ['Dubai', 'Abu Dhabi', 'Riyadh', 'Jeddah', 'Doha', 'Kuwait City', 'Manama', 'Muscat', 'Sharjah', 'Remote'],
       workTypes: ['Full-time', 'Remote', 'Contract']
     },
     {
       titleTemplates: ['DevOps Engineer', 'Cloud Engineer', 'Site Reliability Engineer', 'Platform Engineer'],
-      companies: ['AWS', 'Google Cloud', 'Microsoft Azure', 'HashiCorp', 'Docker', 'Kubernetes'],
+      companies: ['AWS', 'Google Cloud', 'Microsoft Azure', 'Oracle Cloud', 'Alibaba Cloud', 'Digital Ocean', 'HashiCorp'],
       categories: ['DevOps', 'Cloud Computing', 'Infrastructure'],
-      skills: ['Docker', 'Kubernetes', 'AWS', 'Terraform', 'Jenkins', 'Linux'],
-      locations: ['Remote', 'Dublin', 'Frankfurt', 'Sydney', 'Tokyo', 'São Paulo'],
+      skills: ['Docker', 'Kubernetes', 'AWS', 'Terraform', 'Jenkins', 'Linux', 'Ansible'],
+      locations: ['Dubai', 'Abu Dhabi', 'Riyadh', 'Jeddah', 'Doha', 'Kuwait City', 'Manama', 'Muscat', 'Sharjah', 'Remote'],
       workTypes: ['Full-time', 'Remote']
     },
     {
       titleTemplates: ['Mobile Developer', 'iOS Developer', 'Android Developer', 'React Native Developer'],
-      companies: ['Snapchat', 'TikTok', 'Instagram', 'WhatsApp', 'Telegram', 'Discord'],
+      companies: ['Snapchat', 'TikTok', 'Instagram', 'WhatsApp', 'Telegram', 'Discord', 'Careem', 'Talabat', 'Noon'],
       categories: ['Mobile Development', 'iOS', 'Android'],
-      skills: ['Swift', 'Kotlin', 'React Native', 'Flutter', 'iOS', 'Android'],
-      locations: ['Remote', 'Los Angeles', 'Miami', 'Vancouver', 'Stockholm', 'Copenhagen'],
+      skills: ['Swift', 'Kotlin', 'React Native', 'Flutter', 'iOS', 'Android', 'Xamarin'],
+      locations: ['Dubai', 'Abu Dhabi', 'Riyadh', 'Jeddah', 'Doha', 'Kuwait City', 'Manama', 'Muscat', 'Sharjah', 'Remote'],
+      workTypes: ['Full-time', 'Contract', 'Remote']
+    },
+    {
+      titleTemplates: ['Cybersecurity Engineer', 'Security Analyst', 'Penetration Tester', 'Security Consultant'],
+      companies: ['DarkMatter', 'CyberGate', 'Help AG', 'Spire Solutions', 'Trend Micro', 'Symantec', 'McAfee'],
+      categories: ['Cybersecurity', 'Information Security', 'Network Security'],
+      skills: ['Penetration Testing', 'SIEM', 'Firewall', 'VPN', 'Cryptography', 'Incident Response'],
+      locations: ['Dubai', 'Abu Dhabi', 'Riyadh', 'Jeddah', 'Doha', 'Kuwait City', 'Manama', 'Muscat', 'Sharjah', 'Remote'],
       workTypes: ['Full-time', 'Contract', 'Remote']
     }
   ];
@@ -113,7 +121,7 @@ const generateJobCatalog = (searchKeywords = '') => {
             location: template.locations[Math.floor(Math.random() * template.locations.length)],
             workType: template.workTypes[Math.floor(Math.random() * template.workTypes.length)],
             category: template.categories[Math.floor(Math.random() * template.categories.length)],
-            description: `We are looking for a talented ${titleTemplate} to join our ${company} team. You will be working on cutting-edge projects and collaborating with a world-class team.`,
+            description: `We are looking for a talented ${titleTemplate} to join our ${company} team in the Arabian Gulf region. You will be working on cutting-edge projects and collaborating with a world-class team.`,
             requirements: template.skills.slice(0, 4),
             skills: template.skills,
             salary: `$${(Math.floor(Math.random() * 100) + 50)}k - $${(Math.floor(Math.random() * 150) + 100)}k`,
@@ -129,8 +137,7 @@ const generateJobCatalog = (searchKeywords = '') => {
       });
     }
   });
-
-  return jobs.slice(0, 50); // Limit results
+  return jobs.slice(0, 50); // Generate more to have a good pool for filtering
 };
 
 /**
@@ -352,16 +359,16 @@ const fetchJSearchJobs = async (searchKeywords, limit = 20) => {
     return [];
   }
 
-  // Fix: Use the correct JSearch API endpoint and parameters
-  const query = searchKeywords || 'software developer'; // Default search term
-  const url = `${API_CONFIG.JSEARCH_API.baseUrl}/search?query=${encodeURIComponent(query)}&num_pages=1&country=US`;
+  // Focus on Arabian Gulf region
+  const query = searchKeywords || 'software developer';
+  const url = `${API_CONFIG.JSEARCH_API.baseUrl}/search?query=${encodeURIComponent(query)}&num_pages=1&country=AE&country=SA&country=QA&country=KW&country=BH&country=OM`;
   const options = {
     method: 'GET',
     headers: API_CONFIG.JSEARCH_API.headers
   };
 
   try {
-    console.log(`Fetching jobs from JSearch for: "${query}"`);
+    console.log(`Fetching jobs from JSearch for: "${query}" in Arabian Gulf region`);
     const response = await fetch(url, options);
     if (!response.ok) {
       throw new Error(`JSearch API request failed with status: ${response.status}`);
