@@ -132,6 +132,13 @@ const CareerPlanScreen = ({ navigation, onScreenChange }) => {
     });
     return grouped;
   };
+  const handleBack = () => {
+    if (onScreenChange) {
+      onScreenChange('Home');
+    } else {
+      navigation.goBack();
+    }
+  };
 
   const containerStyle = isDarkMode ? styles.containerDark : styles.container;
   const cardStyle = isDarkMode ? styles.cardDark : styles.card;
@@ -143,7 +150,7 @@ const CareerPlanScreen = ({ navigation, onScreenChange }) => {
       <SafeAreaView style={containerStyle}>
         {/* Header */}
         <View style={[styles.header, isDarkMode && styles.headerDark]}>
-          <TouchableOpacity onPress={() => onScreenChange('Home')}>
+        <TouchableOpacity onPress={handleBack}>
             <Ionicons name="arrow-back" size={24} color={isDarkMode ? "#FFFFFF" : "#1f2937"} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, titleStyle]}>Your Personalized Career Plan</Text>
@@ -162,7 +169,7 @@ const CareerPlanScreen = ({ navigation, onScreenChange }) => {
     <SafeAreaView style={containerStyle}>
       {/* Header */}
       <View style={[styles.header, isDarkMode && styles.headerDark]}>
-        <TouchableOpacity onPress={() => onScreenChange('Home')}>
+      <TouchableOpacity onPress={handleBack}>
           <Ionicons name="arrow-back" size={24} color={isDarkMode ? "#FFFFFF" : "#1f2937"} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, titleStyle]}>Your Personalized Career Plan</Text>
@@ -294,6 +301,21 @@ const CareerPlanScreen = ({ navigation, onScreenChange }) => {
           </View>
         ))}
       </ScrollView>
+      {/* Return to Home button at the bottom */}
+      <View style={{ padding: 20 }}>
+        <TouchableOpacity
+          style={{
+            backgroundColor: isDarkMode ? '#10B981' : '#065f46',
+            paddingVertical: 14,
+            borderRadius: 10,
+            alignItems: 'center',
+            marginTop: 10,
+          }}
+          onPress={handleBack}
+        >
+          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Return to Home</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };

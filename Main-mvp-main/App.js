@@ -15,6 +15,7 @@ import WelcomeScreen from './src/screens/WelcomeScreen';
 import RegistrationScreen from './src/screens/RegistrationScreen';
 import QuestionnaireScreen from './src/screens/QuestionnaireScreen';
 import MainScreen from './src/screens/MainScreen';
+import CareerPlanScreen from './src/screens/CareerPlanScreen';
 
 // Import new detail screens (you'll need to create these or they're optional)
 import CourseDetailScreen from './src/screens/coursedetail';

@@ -93,7 +93,7 @@ const generateJobCatalog = (searchKeywords = '') => {
     }
   });
 
-  return jobs.slice(0, 50);
+  return jobs.slice(0, 20);
 };
 
 /**

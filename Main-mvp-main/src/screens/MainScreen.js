@@ -3,7 +3,8 @@ import { View, StyleSheet } from 'react-native';
 import DashboardScreen from './DashboardScreen';
 import ProfileScreen from './ProfileScreen';
 import SettingsScreen from './SettingsScreen';
-import CalendarScreen from './CalendarScreen';
+
+import CareerPlanScreen from './CareerPlanScreen';
 
 const MainScreen = ({ navigation }) => {
   const [currentScreen, setCurrentScreen] = useState('Home');
