@@ -21,6 +21,7 @@ import { runFullAiAnalysis, getDetailedAiAnalysis } from '../services/aiService'
 // Import the enhanced services
 import { fetchCourses } from '../services/courseService';
 import { fetchJobs } from '../services/jobService';
+import CareerPlanScreen from './CareerPlanScreen';
 
 const HomepageScreen = ({ navigation, onScreenChange }) => {
   const { userData, updateUserData, clearUserData } = useUser();
@@ -38,6 +39,7 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [filteredJobs, setFilteredJobs] = useState([]);
+  const [showCareerPlan, setShowCareerPlan] = useState(false);
 
   // Generate search keywords based on user profile
   const generateUserSearchKeywords = () => {
@@ -320,12 +322,18 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
   };
   
   const handleProfilePress = () => { setShowSidebar(false); if (onScreenChange) onScreenChange('Profile'); };
+  const handleCareerPlanPress = () => { setShowSidebar(false); setShowCareerPlan(true); };
   const handleCalendarPress = () => { setShowSidebar(false); if (onScreenChange) onScreenChange('Calendar'); };
   const handleSettingsPress = () => { setShowSidebar(false); if (onScreenChange) onScreenChange('Settings'); };
   const handleLogout = () => {
     setShowSidebar(false);
     clearUserData();
     navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
+  };
+
+  // Handler for viewing the career plan
+  const handleViewPlan = () => {
+    setShowCareerPlan(true);
   };
   
   const { isDarkMode } = useDarkMode();
@@ -356,6 +364,10 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
             <TouchableOpacity style={styles.menuItem} onPress={handleProfilePress}>
               <Ionicons name="person" size={20} color="#6B7280" />
               <Text style={[styles.menuText, textStyle]}>{t('Profile')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={handleCareerPlanPress}>
+              <Ionicons name="rocket-outline" size={20} color="#6B7280" />
+              <Text style={[styles.menuText, textStyle]}>{t('Career Plan')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.menuItem} onPress={handleCalendarPress}>
               <Ionicons name="calendar-outline" size={20} color="#6B7280" />
@@ -405,6 +417,8 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
             onPress={() => setShowSidebar(false)} 
           />
         )}
+        
+        {/* Header (Fixed) */}
         <View style={[styles.header, isDarkMode && styles.headerDark]}>
           <TouchableOpacity onPress={handleMenuPress}>
             <Ionicons name="menu" size={24} color={isDarkMode ? "#FFFFFF" : "#1f2937"} />
@@ -421,78 +435,91 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
             <Ionicons name="refresh" size={24} color={isDarkMode ? "#FFFFFF" : "#1f2937"} />
           </TouchableOpacity>
         </View>
-        
-        <View style={styles.welcomeSection}>
-          <Text style={[styles.welcomeTitle, titleStyle]}>
-            {t('Welcome')}, {userData?.firstName || 'User'}!
-          </Text>
-          <Text style={[styles.welcomeSubtitle, textStyle]}>
-            {t('Your personalized career recommendations')}
-          </Text>
-        </View>
-        
-        {/* AI Recommendations Section */}
-        <View style={styles.aiRecommendationsSection}>
-          <View style={styles.aiHeader}>
-            <Ionicons name="sparkles" size={24} color="#556B2F" />
-            <Text style={[styles.aiTitle, titleStyle]}>{t('AI Recommendations')}</Text>
-          </View>
-          <Text style={[styles.aiSubtitle, textStyle]}>
-            {activeTab === 'Courses' 
-              ? t('Courses tailored to your profile and career goals')
-              : t('Jobs matching your skills and interests')
-            }
-          </Text>
-        </View>
-        
-        <View style={styles.tabContainer}>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'Jobs' ? styles.activeTab : styles.inactiveTab]} 
-            onPress={() => setActiveTab('Jobs')}
-          >
-            <Ionicons name="briefcase-outline" size={20} color={activeTab === 'Jobs' ? "#1f2937" : "#9ca3af"} />
-            <Text style={[styles.tabText, activeTab === 'Jobs' ? styles.activeTabText : styles.inactiveTabText]}>
-              {t('Jobs')} ({filteredJobs.length})
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'Courses' ? styles.activeTab : styles.inactiveTab]} 
-            onPress={() => setActiveTab('Courses')}
-          >
-            <Ionicons name="book-outline" size={20} color={activeTab === 'Courses' ? "#1f2937" : "#9ca3af"} />
-            <Text style={[styles.tabText, activeTab === 'Courses' ? styles.activeTabText : styles.inactiveTabText]}>
-              {t('Courses')} ({filteredCourses.length})
-            </Text>
-          </TouchableOpacity>
-        </View>
 
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <View style={[styles.searchBar, isDarkMode && styles.searchBarDark]}>
-            <Ionicons name="search" size={20} color="#6B7280" />
-            <TextInput
-              style={[styles.searchInput, isDarkMode && styles.searchInputDark]}
-              placeholder={activeTab === 'Jobs' ? t('Search jobs...') : t('Search courses...')}
-              placeholderTextColor="#6B7280"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={20} color="#6B7280" />
+        {/* Scrollable Content */}
+        <ScrollView 
+          style={styles.scrollContainer} 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {/* Welcome Section */}
+          <View style={styles.welcomeSection}>
+            <Text style={[styles.welcomeTitle, titleStyle]}>
+              {t('Welcome')}, {userData?.firstName || 'User'}!
+            </Text>
+            <Text style={[styles.welcomeSubtitle, textStyle]}>
+              {t('Your personalized career recommendations')}
+            </Text>
+          </View>
+          
+          {/* Career Plan Ready Section */}
+          {userData && userData.analysisComplete && (
+            <View style={[styles.careerPlanSection, isDarkMode && styles.careerPlanSectionDark]}>
+              <View style={styles.careerPlanHeader}>
+                <Ionicons name="sparkles" size={24} color="#11523d" />
+                <Text style={[styles.careerPlanTitle, titleStyle]}>{t('Your Career Plan is Ready!')}</Text>
+              </View>
+              <Text style={[styles.careerPlanSubtitle, textStyle]}>
+                {t('Based on your profile, we\'ve created a personalized career roadmap for you.')}
+              </Text>
+              <TouchableOpacity 
+                style={styles.viewPlanButton} 
+                onPress={handleViewPlan}
+              >
+                <Text style={styles.viewPlanText}>{t('View Plan')}</Text>
+                <Ionicons name="arrow-forward" size={16} color="#ffffff" />
               </TouchableOpacity>
-            )}
+            </View>
+          )}
+          
+          <View style={styles.tabContainer}>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'Jobs' ? styles.activeTab : styles.inactiveTab]} 
+              onPress={() => setActiveTab('Jobs')}
+            >
+              <Ionicons name="briefcase-outline" size={20} color={activeTab === 'Jobs' ? "#1f2937" : "#9ca3af"} />
+              <Text style={[styles.tabText, activeTab === 'Jobs' ? styles.activeTabText : styles.inactiveTabText]}>
+                {t('Jobs')} ({filteredJobs.length})
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'Courses' ? styles.activeTab : styles.inactiveTab]} 
+              onPress={() => setActiveTab('Courses')}
+            >
+              <Ionicons name="book-outline" size={20} color={activeTab === 'Courses' ? "#1f2937" : "#9ca3af"} />
+              <Text style={[styles.tabText, activeTab === 'Courses' ? styles.activeTabText : styles.inactiveTabText]}>
+                {t('Courses')} ({filteredCourses.length})
+              </Text>
+            </TouchableOpacity>
           </View>
-        </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <View style={[styles.searchBar, isDarkMode && styles.searchBarDark]}>
+              <Ionicons name="search" size={20} color="#6B7280" />
+              <TextInput
+                style={[styles.searchInput, isDarkMode && styles.searchInputDark]}
+                placeholder={activeTab === 'Jobs' ? t('Search jobs...') : t('Search courses...')}
+                placeholderTextColor="#6B7280"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Ionicons name="close-circle" size={20} color="#6B7280" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {/* Content */}
           {isLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={isDarkMode ? "#FFFFFF" : "#065F46"} />
               <Text style={[textStyle, { marginTop: 16 }]}>Loading personalized recommendations...</Text>
             </View>
           ) : activeTab === 'Jobs' ? (
-            <View>
+            <View style={styles.contentContainer}>
               {filteredJobs.length > 0 ? (
                 filteredJobs.map((job) => (
                   <TouchableOpacity key={job.id} style={[styles.jobCard, cardStyle]} onPress={() => handleJobPress(job)}>
@@ -539,7 +566,7 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
               )}
             </View>
           ) : (
-            <View>
+            <View style={styles.contentContainer}>
               {filteredCourses.length > 0 ? (
                 filteredCourses.map((course) => (
                   <TouchableOpacity key={course.id} style={[styles.courseCard, cardStyle]} onPress={() => handleCoursePress(course)}>
@@ -599,11 +626,27 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
         course={selectedCourse} 
         onClose={() => setShowCourseModal(false)} 
       />
+      
+      {/* Career Plan Screen */}
+      {showCareerPlan && (
+        <View style={StyleSheet.absoluteFillObject}>
+          <CareerPlanScreen 
+            navigation={navigation}
+            onScreenChange={(screen) => {
+              if (screen === 'Home') {
+                setShowCareerPlan(false);
+              } else {
+                setShowCareerPlan(false);
+                if (onScreenChange) onScreenChange(screen);
+              }
+            }}
+          />
+        </View>
+      )}
     </SafeAreaView>
   );
 };
 
-// Styles remain the same as your original
 const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 50 },
   container: { flex: 1, backgroundColor: '#f8fafc' },
@@ -628,15 +671,73 @@ const styles = StyleSheet.create({
   userAvatarPlaceholder: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#065F46', alignItems: 'center', justifyContent: 'center', marginRight: 8 },
   userAvatarText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
   mainContent: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8, backgroundColor: '#FFFFFF' },
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    paddingHorizontal: 20, 
+    paddingTop: 16, 
+    paddingBottom: 8, 
+    backgroundColor: '#FFFFFF',
+    zIndex: 10
+  },
   headerDark: { backgroundColor: '#1F2937' },
+  scrollContainer: { 
+    flex: 1 
+  },
+  scrollContent: {
+    paddingBottom: 20
+  },
   welcomeSection: { paddingHorizontal: 20, paddingVertical: 24 },
   welcomeTitle: { fontSize: 24, fontWeight: '700', color: '#065f46', marginBottom: 8 },
   welcomeSubtitle: { fontSize: 16, color: '#6b7280', fontWeight: '400' },
-  aiRecommendationsSection: { paddingHorizontal: 20, paddingVertical: 16, backgroundColor: '#F0FDF4', marginHorizontal: 20, borderRadius: 12, marginBottom: 16 },
-  aiHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  aiTitle: { fontSize: 18, fontWeight: '600', color: '#556B2F', marginLeft: 8 },
-  aiSubtitle: { fontSize: 14, color: '#556B2F', lineHeight: 20 },
+  
+  // Career Plan Section Styles
+  careerPlanSection: { 
+    paddingHorizontal: 20, 
+    paddingVertical: 16, 
+    backgroundColor: '#F0FDF4', 
+    marginHorizontal: 20, 
+    borderRadius: 12, 
+    marginBottom: 16 
+  },
+  careerPlanSectionDark: { 
+    backgroundColor: '#064E3B' 
+  },
+  careerPlanHeader: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginBottom: 8 
+  },
+  careerPlanTitle: { 
+    fontSize: 18, 
+    fontWeight: '600', 
+    color: '#11523d', 
+    marginLeft: 8 
+  },
+  careerPlanSubtitle: { 
+    fontSize: 14, 
+    color: '#11523d', 
+    lineHeight: 20, 
+    marginBottom: 16 
+  },
+  viewPlanButton: {
+    backgroundColor: '#11523d',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignSelf: 'flex-start'
+  },
+  viewPlanText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginRight: 8
+  },
+
   textDark: { color: '#D1D5DB' },
   tabContainer: { flexDirection: 'row', marginHorizontal: 20, marginBottom: 24 },
   tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, marginHorizontal: 4 },
@@ -667,7 +768,7 @@ const styles = StyleSheet.create({
     color: '#1F2937' 
   },
   searchInputDark: { color: '#D1D5DB' },
-  content: { paddingHorizontal: 20 },
+  contentContainer: { paddingHorizontal: 20 },
   jobCard: { backgroundColor: '#ffffff', borderRadius: 16, padding: 20, marginBottom: 16, shadowColor: '#000000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
   cardDark: { backgroundColor: '#1F2937' },
   jobHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
@@ -717,5 +818,4 @@ const styles = StyleSheet.create({
     lineHeight: 20
   },
 });
-
 export default HomepageScreen;

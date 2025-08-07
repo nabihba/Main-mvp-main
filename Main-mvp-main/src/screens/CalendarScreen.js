@@ -133,7 +133,7 @@ const CalendarScreen = ({ navigation, onScreenChange }) => {
                 <View style={styles.eventHeader}>
                   <View style={[
                     styles.eventTypeIndicator,
-                    { backgroundColor: item.type === 'event' ? '#556B2F' : '#6B7280' }
+                    { backgroundColor: item.type === 'event' ? '#11523d' : '#6B7280' }
                   ]} />
                   <Text style={[styles.eventTitle, isDarkMode && styles.eventTitleDark]}>
                     {item.title}
@@ -209,7 +209,7 @@ const CalendarScreen = ({ navigation, onScreenChange }) => {
                   {dayEvents.map((event, eventIndex) => (
                     <View key={eventIndex} style={[
                       styles.weekEvent,
-                      { backgroundColor: event.type === 'event' ? '#556B2F' : '#6B7280' }
+                      { backgroundColor: event.type === 'event' ? '#11523d' : '#6B7280' }
                     ]}>
                       <Text style={styles.weekEventText} numberOfLines={1}>
                         {event.title}
@@ -277,7 +277,7 @@ const CalendarScreen = ({ navigation, onScreenChange }) => {
                     {dayEvents.slice(0, 2).map((event, eventIndex) => (
                       <View key={eventIndex} style={[
                         styles.dayEventDot,
-                        { backgroundColor: event.type === 'event' ? '#556B2F' : '#6B7280' }
+                        { backgroundColor: event.type === 'event' ? '#11523d' : '#6B7280' }
                       ]} />
                     ))}
                     {dayEvents.length > 2 && (
@@ -477,11 +477,11 @@ const styles = StyleSheet.create({
   headerTitleDark: { color: '#F9FAFB' },
   viewModeSelector: { flexDirection: 'row', paddingHorizontal: 20, paddingVertical: 16, gap: 8 },
   viewModeButton: { flex: 1, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, alignItems: 'center', backgroundColor: '#F3F4F6' },
-  activeViewMode: { backgroundColor: '#556B2F' },
+  activeViewMode: { backgroundColor: '#11523d' },
   viewModeText: { fontSize: 14, fontWeight: '600', color: '#6B7280' },
   activeViewModeText: { color: '#FFFFFF' },
   navigationButtons: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16 },
-  todayButton: { fontSize: 16, fontWeight: '600', color: '#556B2F' },
+  todayButton: { fontSize: 16, fontWeight: '600', color: '#11523d' },
   todayButtonDark: { color: '#10B981' },
   content: { flex: 1 },
   
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
   calendarDayDark: { borderColor: '#374151' },
   otherMonthDay: { backgroundColor: '#F9FAFB' },
   otherMonthDayText: { color: '#9CA3AF' },
-  today: { backgroundColor: '#556B2F' },
+  today: { backgroundColor: '#11523d' },
   todayText: { color: '#FFFFFF', fontWeight: '700' },
   dayNumber: { fontSize: 14, fontWeight: '500', color: '#1F2937' },
   dayNumberDark: { color: '#F9FAFB' },
@@ -547,14 +547,14 @@ const styles = StyleSheet.create({
   modalTitleDark: { color: '#F9FAFB' },
   eventTypeSelector: { flexDirection: 'row', marginBottom: 20, gap: 12 },
   eventTypeButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 8, backgroundColor: '#F3F4F6', gap: 8 },
-  selectedEventType: { backgroundColor: '#556B2F' },
+  selectedEventType: { backgroundColor: '#11523d' },
   eventTypeText: { fontSize: 14, fontWeight: '600', color: '#6B7280' },
   selectedEventTypeText: { color: '#FFFFFF' },
   modalInput: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, color: '#1F2937', backgroundColor: '#FFFFFF', marginBottom: 16 },
   modalInputDark: { borderColor: '#374151', color: '#F9FAFB', backgroundColor: '#374151' },
   modalTextArea: { minHeight: 80, textAlignVertical: 'top' },
-  addButton: { backgroundColor: '#556B2F', borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
+  addButton: { backgroundColor: '#11523d', borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
   addButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
 });
 
-export default CalendarScreen; 
+export default CalendarScreen;
