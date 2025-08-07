@@ -36,6 +36,15 @@ const API_CONFIG = {
     headers: {
       'Content-Type': 'application/json'
     }
+  },
+
+  // JSearch API (New)
+  JSEARCH_API: {
+    baseUrl: 'https://jsearch.p.rapidapi.com',
+    headers: {
+      'X-RapidAPI-Key': RAPIDAPI_KEY,
+      'X-RapidAPI-Host': 'jsearch.p.rapidapi.com'
+    }
   }
 };
 
@@ -335,6 +344,61 @@ const fetchGeneralJobs = async (searchKeywords, limit = 20) => {
 };
 
 /**
+ * ✅ NEW - Fetches jobs from the JSearch API and normalizes the data.
+ */
+const fetchJSearchJobs = async (searchKeywords, limit = 20) => {
+  if (!RAPIDAPI_KEY) {
+    console.log('RapidAPI key not found in config. Skipping JSearch API fetch.');
+    return [];
+  }
+
+  // Fix: Use the correct JSearch API endpoint and parameters
+  const query = searchKeywords || 'software developer'; // Default search term
+  const url = `${API_CONFIG.JSEARCH_API.baseUrl}/search?query=${encodeURIComponent(query)}&num_pages=1&country=US`;
+  const options = {
+    method: 'GET',
+    headers: API_CONFIG.JSEARCH_API.headers
+  };
+
+  try {
+    console.log(`Fetching jobs from JSearch for: "${query}"`);
+    const response = await fetch(url, options);
+    if (!response.ok) {
+      throw new Error(`JSearch API request failed with status: ${response.status}`);
+    }
+    const result = await response.json();
+    const jobsFromApi = result.data || []; // The jobs are in the 'data' property
+
+    // IMPORTANT: Normalize the API data to match your app's structure
+    const normalizedJobs = jobsFromApi.map(job => ({
+      id: `jsearch_${job.job_id}`,
+      title: job.job_title,
+      company: job.employer_name,
+      location: job.job_location,
+      workType: job.job_employment_type || 'Full-time',
+      category: 'General', // JSearch doesn't provide a clear category
+      description: job.job_description,
+      skills: [], // JSearch doesn't provide a clean skills array
+      url: job.job_apply_link,
+      image: job.employer_logo,
+      isRemote: job.job_is_remote,
+      postedDate: job.job_posted_at_datetime_utc,
+      salary: (job.job_min_salary && job.job_max_salary)
+        ? `$${job.job_min_salary.toLocaleString()} - $${job.job_max_salary.toLocaleString()} ${job.job_salary_period}`
+        : 'Not Disclosed',
+      experienceLevel: 'N/A'
+    }));
+
+    console.log(`Successfully fetched and normalized ${normalizedJobs.length} jobs from JSearch.`);
+    return normalizedJobs.slice(0, limit);
+
+  } catch (error) {
+    console.error('JSearch API fetch error:', error.message);
+    return []; // Return empty array on failure to trigger the fallback
+  }
+};
+
+/**
  * Remove duplicate jobs based on title and company similarity
  */
 const removeDuplicateJobs = (jobs) => {
@@ -358,71 +422,36 @@ const removeDuplicateJobs = (jobs) => {
 export const fetchJobs = async (searchKeywords, options = {}) => {
   const {
     useRealAPIs = true,
-    sources = ['indeed', 'linkedin', 'general'], // Available sources
-    maxPerSource = 10,
     fallbackToGenerated = true
   } = options;
 
-  console.log(`Job Service: Searching for jobs about "${searchKeywords}"...`);
+  // Fix: Provide a better default search term
+  const query = searchKeywords || 'software developer';
+  console.log(`Job Service: Searching for jobs about "${query}"...`);
 
   let allJobs = [];
 
-  if (useRealAPIs && RAPIDAPI_KEY) {
-    // Fetch from multiple sources in parallel
-    const apiPromises = [];
-
-    if (sources.includes('indeed')) {
-      apiPromises.push(fetchIndeedJobs(searchKeywords, maxPerSource));
-    }
-    
-    if (sources.includes('linkedin')) {
-      apiPromises.push(fetchLinkedInJobs(searchKeywords, maxPerSource));
-    }
-    
-    if (sources.includes('github')) {
-      apiPromises.push(fetchGitHubJobs(searchKeywords, maxPerSource));
-    }
-    
-    if (sources.includes('general')) {
-      apiPromises.push(fetchGeneralJobs(searchKeywords, maxPerSource));
-    }
-
-    try {
-      const results = await Promise.allSettled(apiPromises);
-      
-      // Combine successful results
-      results.forEach((result, index) => {
-        if (result.status === 'fulfilled' && result.value) {
-          allJobs.push(...result.value);
-        } else {
-          console.warn(`API source ${sources[index]} failed:`, result.reason);
-        }
-      });
-
-      // Remove duplicates
-      allJobs = removeDuplicateJobs(allJobs);
-      
-    } catch (error) {
-      console.error('Error fetching from job APIs:', error);
-    }
+  // Step 1: Try to fetch from the real API if requested
+  if (useRealAPIs) {
+    allJobs = await fetchJSearchJobs(query, 50); // Fetch more to have a good pool
   }
 
-  // Fallback to generated jobs if no real jobs found or APIs disabled
-  if (allJobs.length < 10 && fallbackToGenerated) {
+  // Step 2: ✅ YOUR SAFETY NET
+  // If the API failed (returned 0 jobs), use the local generated jobs as a backup.
+  if (allJobs.length === 0 && fallbackToGenerated) {
     console.log('API fetch failed or returned no results. Using generated job catalog as fallback...');
-    allJobs = generateJobCatalog(searchKeywords);
+    allJobs = generateJobCatalog(query);
   }
 
-  // Ensure we have jobs and limit results
-  if (allJobs.length === 0) {
-    allJobs = generateJobCatalog().slice(0, 20);
-  }
+  // Step 3: Remove duplicates and limit results
+  const uniqueJobs = allJobs.filter((job, index, self) =>
+    index === self.findIndex(j => j.title === job.title && j.company === job.company)
+  );
 
-  // Limit total results for performance
-  allJobs = allJobs.slice(0, 20);
+  const finalJobs = uniqueJobs.slice(0, 20);
 
-  console.log(`Found ${allJobs.length} unique jobs total.`);
-  return allJobs;
+  console.log(`Found ${finalJobs.length} unique jobs total.`);
+  return finalJobs;
 };
 
 /**

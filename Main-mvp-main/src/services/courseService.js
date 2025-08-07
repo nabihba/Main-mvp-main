@@ -6,7 +6,7 @@ import { RAPIDAPI_KEY, UDEMY_API_KEY, COURSERA_API_KEY } from '@env';
 // const COURSERA_API_KEY = process.env.COURSERA_API_KEY;
 
 /**
- * Fetch courses from Udemy API via RapidAPI
+ * ✅ IMPLEMENTED - Fetches courses from the "Udemy Paid Courses for Free" API on RapidAPI
  */
 const fetchUdemyCourses = async (searchKeywords, maxResults = 15) => {
   if (!RAPIDAPI_KEY) {
@@ -14,7 +14,9 @@ const fetchUdemyCourses = async (searchKeywords, maxResults = 15) => {
     return [];
   }
 
-  const url = `https://udemy-paid-courses-for-free-api.p.rapidapi.com/rapidapi/courses/search?page=1&page_size=${maxResults}&query=${encodeURIComponent(searchKeywords)}`;
+  // Fix: Provide a default search term when empty
+  const query = searchKeywords || 'programming';
+  const url = `https://udemy-paid-courses-for-free-api.p.rapidapi.com/rapidapi/courses/search?page=1&page_size=${maxResults}&query=${encodeURIComponent(query)}`;
   const options = {
     method: 'GET',
     headers: {
@@ -24,7 +26,7 @@ const fetchUdemyCourses = async (searchKeywords, maxResults = 15) => {
   };
 
   try {
-    console.log(`Fetching Udemy courses from RapidAPI for: "${searchKeywords}"`);
+    console.log(`Fetching Udemy courses from RapidAPI for: "${query}"`);
     const response = await fetch(url, options);
     if (!response.ok) {
       throw new Error(`Udemy RapidAPI request failed with status: ${response.status}`);
@@ -149,8 +151,9 @@ export const fetchCourses = async (searchKeywords = '', options = {}) => {
     fallbackToGenerated = true
   } = options;
 
-  console.log(`Course Service: Searching for courses about "${searchKeywords}"...`);
-  console.log('Options:', options);
+  // Fix: Provide a better default search term
+  const query = searchKeywords || 'programming technology';
+  console.log(`Course Service: Searching for "${query}" with options:`, options);
   
   let allCourses = [];
 
@@ -159,11 +162,11 @@ export const fetchCourses = async (searchKeywords = '', options = {}) => {
     const fetchPromises = [];
     
     if (sources.includes('udemy')) {
-      fetchPromises.push(fetchUdemyCourses(searchKeywords, maxPerSource));
+      fetchPromises.push(fetchUdemyCourses(query, maxPerSource));
     }
     
     if (sources.includes('coursera')) {
-      fetchPromises.push(fetchCourseraCourses(searchKeywords, maxPerSource));
+      fetchPromises.push(fetchCourseraCourses(query, maxPerSource));
     }
 
     try {
@@ -189,7 +192,7 @@ export const fetchCourses = async (searchKeywords = '', options = {}) => {
   // If the API calls failed or returned less than 10 courses, this block runs.
   if (allCourses.length < 10 && fallbackToGenerated) {
     console.log('API fetch insufficient. Using enhanced local catalog as a fallback or supplement.');
-    const generatedCourses = generateRelevantCourses(searchKeywords, 30);
+    const generatedCourses = generateRelevantCourses(query, 30);
     allCourses.push(...generatedCourses);
   }
 
