@@ -7,7 +7,7 @@ import { testGenerators } from './testGenerators';
 
 // TODO: Replace with your actual Gemini API Key.
 // IMPORTANT: This is not secure for a production app.
-const API_KEY = 'AIzaSyAID57D3UKZdSt8Fc-WarY_2rlN4jNAdro';
+const API_KEY = 'AIzaSyBGVZhZ3jxOrYEaCQH5oPGu_14_sojjmEo';
 
 const genAI = new GoogleGenerativeAI(API_KEY);
 const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
@@ -101,10 +101,9 @@ const getAiRecommendations = async (userData, courseCatalog, jobListings) => {
     4. Consider regional context and opportunities
     5. Prioritize practical, actionable recommendations
     6. Return a single, valid JSON object with two keys: "recommendedCourseIds" and "recommendedJobIds"
-    7. Each key must contain an array of the top 5 most matching STRING IDs from the respective lists
+    7. Each key must contain an array of the top 3 STRING IDs from the respective lists
     8. The output must be only the JSON object and nothing else
     9. If no good matches exist, select the most relevant general options
-
   `;
 
   try {
