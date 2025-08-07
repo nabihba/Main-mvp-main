@@ -27,12 +27,22 @@ const fetchUdemyCourses = async (searchKeywords, maxResults = 15) => {
 
   try {
     console.log(`Fetching Udemy courses from RapidAPI for: "${query}"`);
+    console.log('API URL:', url);
+    console.log('API Headers:', { 'x-rapidapi-key': '***HIDDEN***', 'x-rapidapi-host': options.headers['x-rapidapi-host'] });
+    
     const response = await fetch(url, options);
+    console.log('Response status:', response.status);
+    console.log('Response headers:', response.headers);
+    
     if (!response.ok) {
       throw new Error(`Udemy RapidAPI request failed with status: ${response.status}`);
     }
+    
     const result = await response.json();
+    console.log('Raw API response:', JSON.stringify(result, null, 2));
+    
     const coursesFromApi = result.courses || [];
+    console.log('Courses from API:', coursesFromApi.length);
 
     const normalizedCourses = coursesFromApi.map((course, index) => {
       const uniqueId = `udemy_${course.clean_url?.split('/')[2] || index}_${index}`;
@@ -57,6 +67,7 @@ const fetchUdemyCourses = async (searchKeywords, maxResults = 15) => {
     return normalizedCourses;
   } catch (error) {
     console.error('Udemy RapidAPI fetch error:', error.message);
+    console.error('Full error:', error);
     return []; // Return empty array on failure, which triggers the fallback
   }
 };
