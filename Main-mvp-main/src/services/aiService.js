@@ -187,13 +187,27 @@ export const getDetailedAiAnalysis = async (item, userData, type = 'course') => 
     {
       "summary": "Brief 2-3 sentence summary of the ${type}",
       "personalizedRecommendation": "Detailed explanation of why this is good/bad for this specific user",
-      "relevanceScore": 85,
+      "relevanceScore": [CALCULATE A NUMBER BETWEEN 0-100 BASED ON ACTUAL MATCH WITH USER PROFILE],
       "keyBenefits": ["benefit1", "benefit2", "benefit3"],
       "skillsGained": ["skill1", "skill2", "skill3"],
       "careerProgression": "How this fits into their path to their dream job",
       "regionalContext": "Specific relevance to Palestinian/West Bank opportunities",
       "honestAssessment": "Frank assessment of whether this is worth their time and why"
     }
+
+    IMPORTANT FOR RELEVANCE SCORE:
+    - Score 90-100: Perfect match for user's career goals, experience, and desired fields
+    - Score 75-89: Very good match with most criteria aligned
+    - Score 60-74: Good match with some criteria aligned
+    - Score 45-59: Moderate match, some relevance but not ideal
+    - Score 30-44: Low match, minimal relevance
+    - Score 0-29: Poor match, not recommended for this user
+    
+    Calculate the score based on:
+    1. How well it matches their career goal and dream job (40% weight)
+    2. Alignment with their field experience and desired fields (30% weight)
+    3. Appropriate for their education/experience level (20% weight)
+    4. Relevance to regional opportunities (10% weight)
   `;
 
   try {
