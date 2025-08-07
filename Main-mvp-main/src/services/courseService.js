@@ -1,21 +1,61 @@
 import { generateCourseCatalog, searchCourses } from './courseGenerator';
+import { RAPIDAPI_KEY, UDEMY_API_KEY, COURSERA_API_KEY } from '@env';
 
 // Real course APIs integration
-const UDEMY_API_KEY = process.env.UDEMY_API_KEY; // You'll need to add these
-const COURSERA_API_KEY = process.env.COURSERA_API_KEY;
+// const UDEMY_API_KEY = process.env.UDEMY_API_KEY; // You'll need to add these
+// const COURSERA_API_KEY = process.env.COURSERA_API_KEY;
 
 /**
- * Fetch courses from Udemy API
+ * Fetch courses from Udemy API via RapidAPI
  */
 const fetchUdemyCourses = async (searchKeywords, maxResults = 15) => {
+  if (!RAPIDAPI_KEY) {
+    console.log('RapidAPI key not configured. Skipping Udemy API fetch.');
+    return [];
+  }
+
+  const url = `https://udemy-paid-courses-for-free-api.p.rapidapi.com/rapidapi/courses/search?page=1&page_size=${maxResults}&query=${encodeURIComponent(searchKeywords)}`;
+  const options = {
+    method: 'GET',
+    headers: {
+      'x-rapidapi-key': RAPIDAPI_KEY,
+      'x-rapidapi-host': 'udemy-paid-courses-for-free-api.p.rapidapi.com'
+    }
+  };
+
   try {
-    // For now, return empty array since we don't have API keys
-    // In production, implement actual Udemy API calls here
-    console.log('Udemy API integration not yet configured');
-    return [];
+    console.log(`Fetching Udemy courses from RapidAPI for: "${searchKeywords}"`);
+    const response = await fetch(url, options);
+    if (!response.ok) {
+      throw new Error(`Udemy RapidAPI request failed with status: ${response.status}`);
+    }
+    const result = await response.json();
+    const coursesFromApi = result.courses || [];
+
+    const normalizedCourses = coursesFromApi.map((course, index) => {
+      const uniqueId = `udemy_${course.clean_url?.split('/')[2] || index}_${index}`;
+      return {
+        id: uniqueId,
+        title: course.name,
+        provider: 'Udemy',
+        category: course.category,
+        description: course.description,
+        image: course.image,
+        price: course.sale_price_usd ? `$${(course.sale_price_usd / 100).toFixed(2)}` : 'Free',
+        url: course.url,
+        level: 'All Levels',
+        duration: 'N/A',
+        skills: [],
+        rating: 0,
+        students: 0
+      };
+    });
+
+    console.log(`Successfully fetched and normalized ${normalizedCourses.length} courses from Udemy.`);
+    return normalizedCourses;
   } catch (error) {
-    console.error('Udemy API error:', error);
-    return [];
+    console.error('Udemy RapidAPI fetch error:', error.message);
+    return []; // Return empty array on failure, which triggers the fallback
   }
 };
 
@@ -103,8 +143,8 @@ const generateRelevantCourses = (searchKeywords, maxResults = 20) => {
  */
 export const fetchCourses = async (searchKeywords = '', options = {}) => {
   const {
-    useRealAPIs = false,
-    sources = ['udemy', 'coursera', 'classcentral'],
+    useRealAPIs = true, // Changed to true by default
+    sources = ['udemy', 'coursera'],
     maxPerSource = 15,
     fallbackToGenerated = true
   } = options;
@@ -114,7 +154,7 @@ export const fetchCourses = async (searchKeywords = '', options = {}) => {
   
   let allCourses = [];
 
-  if (useRealAPIs) {
+  if (useRealAPIs && RAPIDAPI_KEY) {
     // Try to fetch from real APIs
     const fetchPromises = [];
     
@@ -125,10 +165,6 @@ export const fetchCourses = async (searchKeywords = '', options = {}) => {
     if (sources.includes('coursera')) {
       fetchPromises.push(fetchCourseraCourses(searchKeywords, maxPerSource));
     }
-    
-    if (sources.includes('classcentral')) {
-      fetchPromises.push(fetchClassCentralCourses(searchKeywords, maxPerSource));
-    }
 
     try {
       const results = await Promise.allSettled(fetchPromises);
@@ -137,7 +173,7 @@ export const fetchCourses = async (searchKeywords = '', options = {}) => {
         if (result.status === 'fulfilled' && result.value.length > 0) {
           console.log(`Fetched ${result.value.length} courses from ${sources[index]}`);
           allCourses.push(...result.value);
-        } else {
+        } else if (result.status === 'rejected') {
           console.log(`Failed to fetch from ${sources[index]}:`, result.reason);
         }
       });
@@ -145,24 +181,25 @@ export const fetchCourses = async (searchKeywords = '', options = {}) => {
     } catch (error) {
       console.error('Error fetching from real APIs:', error);
     }
+  } else if (useRealAPIs && !RAPIDAPI_KEY) {
+    console.log('RapidAPI key not found in config. Skipping API fetch.');
   }
 
-  // If we don't have enough courses from real APIs, use generated ones
+  // ✅ THIS IS YOUR SAFETY NET
+  // If the API calls failed or returned less than 10 courses, this block runs.
   if (allCourses.length < 10 && fallbackToGenerated) {
-    console.log('Using generated courses as fallback');
+    console.log('API fetch insufficient. Using enhanced local catalog as a fallback or supplement.');
     const generatedCourses = generateRelevantCourses(searchKeywords, 30);
     allCourses.push(...generatedCourses);
   }
 
-  // Remove duplicates and limit results
+  // Remove duplicates, prioritizing API results because they come first in the array
   const uniqueCourses = allCourses.filter((course, index, self) => 
     index === self.findIndex(c => c.title === course.title && c.provider === course.provider)
   );
 
-  const finalCourses = uniqueCourses.slice(0, 50);
+  const finalCourses = uniqueCourses.slice(0, 20);
   
-  console.log(`Final result: ${finalCourses.length} unique courses`);
-  console.log('Sample course:', finalCourses[0]);
-  
+  console.log(`Final result: ${finalCourses.length} unique courses returned.`);
   return finalCourses;
 };

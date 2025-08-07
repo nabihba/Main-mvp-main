@@ -1,4 +1,5 @@
 // jobService.js - Service for fetching real job data from multiple APIs
+import { RAPIDAPI_KEY } from '@env';
 
 // API Configuration
 const API_CONFIG = {
@@ -6,7 +7,7 @@ const API_CONFIG = {
   JOBS_API: {
     baseUrl: 'https://jobs-api14.p.rapidapi.com',
     headers: {
-      'X-RapidAPI-Key': process.env.REACT_APP_RAPIDAPI_KEY,
+      'X-RapidAPI-Key': RAPIDAPI_KEY,
       'X-RapidAPI-Host': 'jobs-api14.p.rapidapi.com'
     }
   },
@@ -15,7 +16,7 @@ const API_CONFIG = {
   INDEED_API: {
     baseUrl: 'https://indeed12.p.rapidapi.com',
     headers: {
-      'X-RapidAPI-Key': process.env.REACT_APP_RAPIDAPI_KEY,
+      'X-RapidAPI-Key': RAPIDAPI_KEY,
       'X-RapidAPI-Host': 'indeed12.p.rapidapi.com'
     }
   },
@@ -24,7 +25,7 @@ const API_CONFIG = {
   LINKEDIN_API: {
     baseUrl: 'https://linkedin-jobs-search.p.rapidapi.com',
     headers: {
-      'X-RapidAPI-Key': process.env.REACT_APP_RAPIDAPI_KEY,
+      'X-RapidAPI-Key': RAPIDAPI_KEY,
       'X-RapidAPI-Host': 'linkedin-jobs-search.p.rapidapi.com'
     }
   },
@@ -366,7 +367,7 @@ export const fetchJobs = async (searchKeywords, options = {}) => {
 
   let allJobs = [];
 
-  if (useRealAPIs && process.env.REACT_APP_RAPIDAPI_KEY) {
+  if (useRealAPIs && RAPIDAPI_KEY) {
     // Fetch from multiple sources in parallel
     const apiPromises = [];
 
@@ -407,8 +408,8 @@ export const fetchJobs = async (searchKeywords, options = {}) => {
   }
 
   // Fallback to generated jobs if no real jobs found or APIs disabled
-  if ((allJobs.length === 0 && fallbackToGenerated) || !useRealAPIs) {
-    console.log('Using generated job catalog as fallback...');
+  if (allJobs.length < 10 && fallbackToGenerated) {
+    console.log('API fetch failed or returned no results. Using generated job catalog as fallback...');
     allJobs = generateJobCatalog(searchKeywords);
   }
 
@@ -418,13 +419,9 @@ export const fetchJobs = async (searchKeywords, options = {}) => {
   }
 
   // Limit total results for performance
-  allJobs = allJobs.slice(0, 50);
+  allJobs = allJobs.slice(0, 20);
 
-  console.log(`Found ${allJobs.length} jobs total`);
-  if (allJobs.length > 0) {
-    console.log('Sample job:', allJobs[0]);
-  }
-
+  console.log(`Found ${allJobs.length} unique jobs total.`);
   return allJobs;
 };
 
