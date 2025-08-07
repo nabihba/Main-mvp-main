@@ -30,10 +30,11 @@ export default function App() {
           <PaperProvider>
             <NavigationContainer>
               <Stack.Navigator
-                initialRouteName="Welcome" // Keep your existing flow
+                initialRouteName="Welcome" 
                 screenOptions={{
+                  headerShown: false, 
                   headerStyle: {
-                    backgroundColor: '#556B2F', // Keep your olive color theme
+                    backgroundColor: '#11523d', 
                   },
                   headerTintColor: '#fff',
                   headerTitleStyle: {

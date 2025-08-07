@@ -159,7 +159,7 @@ export const fetchCourses = async (searchKeywords = '', options = {}) => {
     index === self.findIndex(c => c.title === course.title && c.provider === course.provider)
   );
 
-  const finalCourses = uniqueCourses.slice(0, 50);
+  const finalCourses = uniqueCourses.slice(0, 5);
   
   console.log(`Final result: ${finalCourses.length} unique courses`);
   console.log('Sample course:', finalCourses[0]);

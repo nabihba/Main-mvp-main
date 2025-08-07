@@ -418,7 +418,7 @@ export const fetchJobs = async (searchKeywords, options = {}) => {
   }
 
   // Limit total results for performance
-  allJobs = allJobs.slice(0, 50);
+  allJobs = allJobs.slice(0, 20);
 
   console.log(`Found ${allJobs.length} jobs total`);
   if (allJobs.length > 0) {

@@ -82,8 +82,7 @@ const WelcomeScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* ✅ This is the new design's JSX, fully connected to your working logic */}
-      <TouchableOpacity style={styles.languageToggle} onPress={toggleLanguage}>
+          <TouchableOpacity style={styles.languageToggle} onPress={toggleLanguage}>
         <Text style={styles.languageText}>{language}</Text>
         <Ionicons name="language" size={20} color="#11523d" />
       </TouchableOpacity>
@@ -212,8 +211,8 @@ const styles = StyleSheet.create({
   },
   languageToggle: {
     position: 'absolute',
-    top: 60,
-    right: 20,
+    top: 120,
+    right: 25,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
