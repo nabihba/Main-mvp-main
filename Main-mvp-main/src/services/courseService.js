@@ -39,45 +39,20 @@ const fetchCourseraCourses = async (searchKeywords, maxResults = 15) => {
  */
 const fetchClassCentralCourses = async (searchKeywords, maxResults = 15) => {
   try {
-    // Using ClassCentral's free API for course discovery
-    const encodedQuery = encodeURIComponent(searchKeywords);
-    const response = await fetch(
-      `https://www.classcentral.com/api/courses?q=${encodedQuery}&limit=${maxResults}`,
-      {
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'BridgeIT-Mobile-App'
-        }
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`ClassCentral API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    return (data.results || []).map(course => ({
-      id: `classcentral_${course.id}`,
-      title: course.name || course.title,
-      provider: course.institutions?.[0]?.name || course.provider || 'ClassCentral',
-      description: course.description || 'No description available',
-      image: course.photoUrl || `https://source.unsplash.com/400x300/?education,${encodeURIComponent(course.name || 'course')}`,
-      level: course.difficulty || 'Beginner',
-      duration: course.length || 'Self-paced',
-      price: course.price === 0 ? 'Free' : course.price ? `$${course.price}` : 'Paid',
-      skills: course.subjects?.map(s => s.name) || [course.subject?.name].filter(Boolean) || [],
-      course_url: course.url || course.link,
-      category: course.subject?.name || 'General',
-      rating: course.rating,
-      source: 'ClassCentral'
-    }));
+    // ClassCentral API might not be publicly available
+    // For now, we'll skip this and rely on generated courses
+    console.log('ClassCentral API integration temporarily disabled');
+    return [];
   } catch (error) {
     console.error('ClassCentral API error:', error);
     return [];
   }
 };
 
+
+/**
+ * Generate relevant courses based on user profile and keywords
+ */
 /**
  * Generate relevant courses based on user profile and keywords
  */
@@ -93,10 +68,30 @@ const generateRelevantCourses = (searchKeywords, maxResults = 20) => {
   
   // If we found relevant courses, return them
   if (relevantCourses.length > 0) {
+    console.log(`Found ${relevantCourses.length} relevant courses for "${searchKeywords}"`);
     return relevantCourses.slice(0, maxResults);
   }
   
-  // Fallback to general courses
+  // If no relevant courses found, try with individual keywords
+  const keywords = searchKeywords.split(' ').filter(word => word.length > 2);
+  if (keywords.length > 1) {
+    for (const keyword of keywords) {
+      const keywordCourses = searchCourses(keyword);
+      if (keywordCourses.length > 0) {
+        console.log(`Found courses for keyword "${keyword}"`);
+        return keywordCourses.slice(0, maxResults);
+      }
+    }
+  }
+  
+  // Last resort: return general tech/business courses instead of random ones
+  const generalTechCourses = searchCourses('programming technology business management');
+  if (generalTechCourses.length > 0) {
+    console.log('Using general technology/business courses as fallback');
+    return generalTechCourses.slice(0, maxResults);
+  }
+  
+  // Absolute fallback
   return generateCourseCatalog().slice(0, maxResults);
 };
 

@@ -208,6 +208,13 @@ export const getDetailedAiAnalysis = async (item, userData, type = 'course') => 
     2. Alignment with their field experience and desired fields (30% weight)
     3. Appropriate for their education/experience level (20% weight)
     4. Relevance to regional opportunities (10% weight)
+    
+    BE STRICT WITH SCORING - If a ${type} is not relevant to the user's profile, give it a low score!
+    For example:
+    - Food course for software engineer = 5-15%
+    - Art course for business student = 10-20%
+    - Advanced ML course for beginner = 20-30%
+    - Perfect career match = 85-95%
   `;
 
   try {

@@ -436,10 +436,23 @@ export const searchCourses = (searchTerm) => {
     return { ...course, relevanceScore: score };
   });
   
-  // Filter courses with score > 0 and sort by relevance
-  return scoredCourses
-    .filter(course => course.relevanceScore > 0)
-    .sort((a, b) => b.relevanceScore - a.relevanceScore)
-    .map(({ relevanceScore, ...course }) => course); // Remove score from final result
+  // Filter courses with meaningful relevance (score > 30) and sort by relevance
+  const filteredCourses = scoredCourses
+    .filter(course => course.relevanceScore > 30) // Only show courses with decent relevance
+    .sort((a, b) => b.relevanceScore - a.relevanceScore);
+  
+  console.log(`Filtered ${filteredCourses.length} relevant courses from ${scoredCourses.length} total courses`);
+  
+  // If we have very few relevant courses, lower the threshold slightly
+  if (filteredCourses.length < 5) {
+    const relaxedCourses = scoredCourses
+      .filter(course => course.relevanceScore > 15)
+      .sort((a, b) => b.relevanceScore - a.relevanceScore);
+    
+    console.log(`Using relaxed threshold: ${relaxedCourses.length} courses`);
+    return relaxedCourses.map(({ relevanceScore, ...course }) => course);
+  }
+  
+  return filteredCourses.map(({ relevanceScore, ...course }) => course); // Remove score from final result
 };
  
