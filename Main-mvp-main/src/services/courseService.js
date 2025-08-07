@@ -117,44 +117,154 @@ const fetchSkillshareCourses = async (searchKeywords, maxResults = 15) => {
 };
 
 /**
- * ✅ NEW - Fetches courses from Coursera API via RapidAPI
+ * ✅ NEW - Fetches courses from YouTube Education API via RapidAPI
  */
-const fetchCourseraCourses = async (searchKeywords, maxResults = 15) => {
+const fetchYouTubeCourses = async (searchKeywords, maxResults = 15) => {
   if (!RAPIDAPI_KEY) {
-    console.log('RapidAPI key not configured. Skipping Coursera API fetch.');
+    console.log('RapidAPI key not configured. Skipping YouTube API fetch.');
     return [];
   }
 
-  const query = searchKeywords || 'programming';
-  const url = `https://coursera-courses.p.rapidapi.com/search?q=${encodeURIComponent(query)}&limit=${maxResults}`;
+  const query = searchKeywords || 'programming tutorial';
+  const url = `https://youtube-search-results.p.rapidapi.com/youtube-search/?q=${encodeURIComponent(query)}&limit=${maxResults}`;
   const options = {
     method: 'GET',
     headers: {
       'x-rapidapi-key': RAPIDAPI_KEY,
-      'x-rapidapi-host': 'coursera-courses.p.rapidapi.com'
+      'x-rapidapi-host': 'youtube-search-results.p.rapidapi.com'
     }
   };
 
   try {
-    console.log(`Fetching Coursera courses from RapidAPI for: "${query}"`);
+    console.log(`Fetching YouTube courses from RapidAPI for: "${query}"`);
     const response = await fetch(url, options);
     if (!response.ok) {
-      throw new Error(`Coursera RapidAPI request failed with status: ${response.status}`);
+      throw new Error(`YouTube RapidAPI request failed with status: ${response.status}`);
+    }
+    const result = await response.json();
+    const videosFromApi = result.items || result.videos || [];
+
+    const normalizedCourses = videosFromApi.map((video, index) => {
+      const uniqueId = `youtube_${video.id || video.video_id || index}_${index}`;
+      return {
+        id: uniqueId,
+        title: video.title || video.name,
+        provider: 'YouTube',
+        category: 'Education',
+        description: video.description || video.snippet || 'Educational video content',
+        image: video.thumbnail || video.image || 'https://source.unsplash.com/400x300/?youtube,education',
+        price: 'Free',
+        url: video.url || video.link || `https://www.youtube.com/watch?v=${video.id}`,
+        level: 'All Levels',
+        duration: video.duration || 'N/A',
+        skills: [],
+        rating: 4.3,
+        students: video.view_count || 0
+      };
+    });
+
+    console.log(`Successfully fetched and normalized ${normalizedCourses.length} courses from YouTube.`);
+    return normalizedCourses;
+  } catch (error) {
+    console.error('YouTube RapidAPI fetch error:', error.message);
+    return []; // Return empty array on failure, which triggers the fallback
+  }
+};
+
+/**
+ * ✅ NEW - Fetches courses from LinkedIn Learning API via RapidAPI
+ */
+const fetchLinkedInCourses = async (searchKeywords, maxResults = 15) => {
+  if (!RAPIDAPI_KEY) {
+    console.log('RapidAPI key not configured. Skipping LinkedIn Learning API fetch.');
+    return [];
+  }
+
+  const query = searchKeywords || 'programming';
+  const url = `https://linkedin-learning.p.rapidapi.com/search?q=${encodeURIComponent(query)}&limit=${maxResults}`;
+  const options = {
+    method: 'GET',
+    headers: {
+      'x-rapidapi-key': RAPIDAPI_KEY,
+      'x-rapidapi-host': 'linkedin-learning.p.rapidapi.com'
+    }
+  };
+
+  try {
+    console.log(`Fetching LinkedIn Learning courses from RapidAPI for: "${query}"`);
+    const response = await fetch(url, options);
+    if (!response.ok) {
+      throw new Error(`LinkedIn Learning RapidAPI request failed with status: ${response.status}`);
     }
     const result = await response.json();
     const coursesFromApi = result.courses || result.data || [];
 
     const normalizedCourses = coursesFromApi.map((course, index) => {
-      const uniqueId = `coursera_${course.id || course.course_id || index}_${index}`;
+      const uniqueId = `linkedin_${course.id || course.course_id || index}_${index}`;
       return {
         id: uniqueId,
         title: course.title || course.name,
-        provider: 'Coursera',
-        category: course.subject || course.category || 'Education',
-        description: course.description || course.short_description || 'Professional course from top institutions',
-        image: course.image || course.course_image || 'https://source.unsplash.com/400x300/?education,professional',
-        price: course.price || 'Free',
-        url: course.url || course.course_url || `https://www.coursera.org/learn/${course.id}`,
+        provider: 'LinkedIn Learning',
+        category: course.category || course.subject || 'Professional Development',
+        description: course.description || course.short_description || 'Professional development courses for career growth',
+        image: course.image || course.course_image || 'https://source.unsplash.com/400x300/?professional,learning',
+        price: course.price || '$29.99',
+        url: course.url || course.course_url || `https://www.linkedin.com/learning/${course.id}`,
+        level: course.level || 'All Levels',
+        duration: course.duration || course.length || 'N/A',
+        skills: course.skills || [],
+        rating: course.rating || 4.5,
+        students: course.enrollment || course.students || 0
+      };
+    });
+
+    console.log(`Successfully fetched and normalized ${normalizedCourses.length} courses from LinkedIn Learning.`);
+    return normalizedCourses;
+  } catch (error) {
+    console.error('LinkedIn Learning RapidAPI fetch error:', error.message);
+    return []; // Return empty array on failure, which triggers the fallback
+  }
+};
+
+/**
+ * ✅ NEW - Fetches courses from Pluralsight API via RapidAPI
+ */
+const fetchPluralsightCourses = async (searchKeywords, maxResults = 15) => {
+  if (!RAPIDAPI_KEY) {
+    console.log('RapidAPI key not configured. Skipping Pluralsight API fetch.');
+    return [];
+  }
+
+  const query = searchKeywords || 'programming';
+  const url = `https://pluralsight-courses.p.rapidapi.com/search?q=${encodeURIComponent(query)}&limit=${maxResults}`;
+  const options = {
+    method: 'GET',
+    headers: {
+      'x-rapidapi-key': RAPIDAPI_KEY,
+      'x-rapidapi-host': 'pluralsight-courses.p.rapidapi.com'
+    }
+  };
+
+  try {
+    console.log(`Fetching Pluralsight courses from RapidAPI for: "${query}"`);
+    const response = await fetch(url, options);
+    if (!response.ok) {
+      throw new Error(`Pluralsight RapidAPI request failed with status: ${response.status}`);
+    }
+    const result = await response.json();
+    const coursesFromApi = result.courses || result.data || [];
+
+    const normalizedCourses = coursesFromApi.map((course, index) => {
+      const uniqueId = `pluralsight_${course.id || course.course_id || index}_${index}`;
+      return {
+        id: uniqueId,
+        title: course.title || course.name,
+        provider: 'Pluralsight',
+        category: course.category || course.subject || 'Technology',
+        description: course.description || course.short_description || 'Technology and software development courses',
+        image: course.image || course.course_image || 'https://source.unsplash.com/400x300/?technology,software',
+        price: course.price || '$29/month',
+        url: course.url || course.course_url || `https://www.pluralsight.com/courses/${course.id}`,
         level: course.level || 'All Levels',
         duration: course.duration || course.length || 'N/A',
         skills: course.skills || [],
@@ -163,10 +273,10 @@ const fetchCourseraCourses = async (searchKeywords, maxResults = 15) => {
       };
     });
 
-    console.log(`Successfully fetched and normalized ${normalizedCourses.length} courses from Coursera.`);
+    console.log(`Successfully fetched and normalized ${normalizedCourses.length} courses from Pluralsight.`);
     return normalizedCourses;
   } catch (error) {
-    console.error('Coursera RapidAPI fetch error:', error.message);
+    console.error('Pluralsight RapidAPI fetch error:', error.message);
     return []; // Return empty array on failure, which triggers the fallback
   }
 };
@@ -241,7 +351,7 @@ const generateRelevantCourses = (searchKeywords, maxResults = 20) => {
 export const fetchCourses = async (searchKeywords = '', options = {}) => {
   const {
     useRealAPIs = true, // Changed to true by default
-    sources = ['udemy', 'skillshare', 'coursera'], // Changed edx to skillshare
+    sources = ['udemy', 'skillshare', 'youtube', 'linkedin', 'pluralsight'], // ALL APIs
     maxPerSource = 15,
     fallbackToGenerated = true
   } = options;
@@ -264,8 +374,16 @@ export const fetchCourses = async (searchKeywords = '', options = {}) => {
       fetchPromises.push(fetchSkillshareCourses(query, maxPerSource));
     }
     
-    if (sources.includes('coursera')) {
-      fetchPromises.push(fetchCourseraCourses(query, maxPerSource));
+    if (sources.includes('youtube')) {
+      fetchPromises.push(fetchYouTubeCourses(query, maxPerSource));
+    }
+    
+    if (sources.includes('linkedin')) {
+      fetchPromises.push(fetchLinkedInCourses(query, maxPerSource));
+    }
+    
+    if (sources.includes('pluralsight')) {
+      fetchPromises.push(fetchPluralsightCourses(query, maxPerSource));
     }
 
     try {
