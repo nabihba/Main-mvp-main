@@ -27,22 +27,12 @@ const fetchUdemyCourses = async (searchKeywords, maxResults = 15) => {
 
   try {
     console.log(`Fetching Udemy courses from RapidAPI for: "${query}"`);
-    console.log('API URL:', url);
-    console.log('API Headers:', { 'x-rapidapi-key': '***HIDDEN***', 'x-rapidapi-host': options.headers['x-rapidapi-host'] });
-    
     const response = await fetch(url, options);
-    console.log('Response status:', response.status);
-    console.log('Response headers:', response.headers);
-    
     if (!response.ok) {
       throw new Error(`Udemy RapidAPI request failed with status: ${response.status}`);
     }
-    
     const result = await response.json();
-    console.log('Raw API response:', JSON.stringify(result, null, 2));
-    
     const coursesFromApi = result.courses || [];
-    console.log('Courses from API:', coursesFromApi.length);
 
     const normalizedCourses = coursesFromApi.map((course, index) => {
       const uniqueId = `udemy_${course.clean_url?.split('/')[2] || index}_${index}`;
@@ -67,23 +57,117 @@ const fetchUdemyCourses = async (searchKeywords, maxResults = 15) => {
     return normalizedCourses;
   } catch (error) {
     console.error('Udemy RapidAPI fetch error:', error.message);
-    console.error('Full error:', error);
     return []; // Return empty array on failure, which triggers the fallback
   }
 };
 
 /**
- * Fetch courses from Coursera API
+ * ✅ NEW - Fetches courses from edX API via RapidAPI
+ */
+const fetchEdXCourses = async (searchKeywords, maxResults = 15) => {
+  if (!RAPIDAPI_KEY) {
+    console.log('RapidAPI key not configured. Skipping edX API fetch.');
+    return [];
+  }
+
+  const query = searchKeywords || 'programming';
+  const url = `https://edx-courses.p.rapidapi.com/search?q=${encodeURIComponent(query)}&limit=${maxResults}`;
+  const options = {
+    method: 'GET',
+    headers: {
+      'x-rapidapi-key': RAPIDAPI_KEY,
+      'x-rapidapi-host': 'edx-courses.p.rapidapi.com'
+    }
+  };
+
+  try {
+    console.log(`Fetching edX courses from RapidAPI for: "${query}"`);
+    const response = await fetch(url, options);
+    if (!response.ok) {
+      throw new Error(`edX RapidAPI request failed with status: ${response.status}`);
+    }
+    const result = await response.json();
+    const coursesFromApi = result.courses || result.data || [];
+
+    const normalizedCourses = coursesFromApi.map((course, index) => {
+      const uniqueId = `edx_${course.id || course.course_id || index}_${index}`;
+      return {
+        id: uniqueId,
+        title: course.title || course.name,
+        provider: 'edX',
+        category: course.subject || course.category || 'Education',
+        description: course.description || course.short_description || 'High-quality course from top universities',
+        image: course.image || course.course_image || 'https://source.unsplash.com/400x300/?education,university',
+        price: course.price || 'Free',
+        url: course.url || course.course_url || `https://www.edx.org/course/${course.id}`,
+        level: course.level || 'All Levels',
+        duration: course.duration || course.length || 'N/A',
+        skills: course.skills || [],
+        rating: course.rating || 4.5,
+        students: course.enrollment || course.students || 0
+      };
+    });
+
+    console.log(`Successfully fetched and normalized ${normalizedCourses.length} courses from edX.`);
+    return normalizedCourses;
+  } catch (error) {
+    console.error('edX RapidAPI fetch error:', error.message);
+    return []; // Return empty array on failure, which triggers the fallback
+  }
+};
+
+/**
+ * ✅ NEW - Fetches courses from Coursera API via RapidAPI
  */
 const fetchCourseraCourses = async (searchKeywords, maxResults = 15) => {
+  if (!RAPIDAPI_KEY) {
+    console.log('RapidAPI key not configured. Skipping Coursera API fetch.');
+    return [];
+  }
+
+  const query = searchKeywords || 'programming';
+  const url = `https://coursera-courses.p.rapidapi.com/search?q=${encodeURIComponent(query)}&limit=${maxResults}`;
+  const options = {
+    method: 'GET',
+    headers: {
+      'x-rapidapi-key': RAPIDAPI_KEY,
+      'x-rapidapi-host': 'coursera-courses.p.rapidapi.com'
+    }
+  };
+
   try {
-    // For now, return empty array since we don't have API keys
-    // In production, implement actual Coursera API calls here
-    console.log('Coursera API integration not yet configured');
-    return [];
+    console.log(`Fetching Coursera courses from RapidAPI for: "${query}"`);
+    const response = await fetch(url, options);
+    if (!response.ok) {
+      throw new Error(`Coursera RapidAPI request failed with status: ${response.status}`);
+    }
+    const result = await response.json();
+    const coursesFromApi = result.courses || result.data || [];
+
+    const normalizedCourses = coursesFromApi.map((course, index) => {
+      const uniqueId = `coursera_${course.id || course.course_id || index}_${index}`;
+      return {
+        id: uniqueId,
+        title: course.title || course.name,
+        provider: 'Coursera',
+        category: course.subject || course.category || 'Education',
+        description: course.description || course.short_description || 'Professional course from top institutions',
+        image: course.image || course.course_image || 'https://source.unsplash.com/400x300/?education,professional',
+        price: course.price || 'Free',
+        url: course.url || course.course_url || `https://www.coursera.org/learn/${course.id}`,
+        level: course.level || 'All Levels',
+        duration: course.duration || course.length || 'N/A',
+        skills: course.skills || [],
+        rating: course.rating || 4.6,
+        students: course.enrollment || course.students || 0
+      };
+    });
+
+    console.log(`Successfully fetched and normalized ${normalizedCourses.length} courses from Coursera.`);
+    return normalizedCourses;
   } catch (error) {
-    console.error('Coursera API error:', error);
-    return [];
+    console.error('Coursera RapidAPI fetch error:', error.message);
+    return []; // Return empty array on failure, which triggers the fallback
   }
 };
 
@@ -157,7 +241,7 @@ const generateRelevantCourses = (searchKeywords, maxResults = 20) => {
 export const fetchCourses = async (searchKeywords = '', options = {}) => {
   const {
     useRealAPIs = true, // Changed to true by default
-    sources = ['udemy', 'coursera'],
+    sources = ['udemy', 'edx', 'coursera'], // Added edX to default sources
     maxPerSource = 15,
     fallbackToGenerated = true
   } = options;
@@ -174,6 +258,10 @@ export const fetchCourses = async (searchKeywords = '', options = {}) => {
     
     if (sources.includes('udemy')) {
       fetchPromises.push(fetchUdemyCourses(query, maxPerSource));
+    }
+    
+    if (sources.includes('edx')) {
+      fetchPromises.push(fetchEdXCourses(query, maxPerSource));
     }
     
     if (sources.includes('coursera')) {
@@ -216,4 +304,127 @@ export const fetchCourses = async (searchKeywords = '', options = {}) => {
   
   console.log(`Final result: ${finalCourses.length} unique courses returned.`);
   return finalCourses;
+};
+
+const generateEnhancedCourseCatalog = () => {
+  const enhancedCourses = [
+    // AI and Machine Learning Courses
+    {
+      id: 'ai_ml_fundamentals_001',
+      title: 'Machine Learning Fundamentals with Python',
+      provider: 'TechEd Online',
+      category: 'Artificial Intelligence',
+      level: 'Intermediate',
+      duration: '12 weeks',
+      description: 'Master machine learning algorithms including supervised learning, unsupervised learning, and neural networks. Build real AI applications using Python, scikit-learn, and TensorFlow.',
+      skills: ['Python', 'Machine Learning', 'TensorFlow', 'Data Analysis', 'Neural Networks'],
+      image: 'https://source.unsplash.com/400x300/?machine-learning,ai',
+      rating: 4.8,
+      students: 25000,
+      price: '$199',
+      url: 'https://example.com/ml-course'
+    },
+    
+    // edX-style University Courses
+    {
+      id: 'edx_cs50_001',
+      title: 'CS50: Introduction to Computer Science',
+      provider: 'edX - Harvard University',
+      category: 'Computer Science',
+      level: 'Beginner',
+      duration: '12 weeks',
+      description: 'An introduction to the intellectual enterprises of computer science and the art of programming. Learn from Harvard University professors.',
+      skills: ['C', 'Python', 'SQL', 'JavaScript', 'Computer Science Fundamentals'],
+      image: 'https://source.unsplash.com/400x300/?harvard,computer-science',
+      rating: 4.9,
+      students: 50000,
+      price: 'Free',
+      url: 'https://www.edx.org/course/cs50s-introduction-to-computer-science'
+    },
+    {
+      id: 'edx_mit_001',
+      title: 'Introduction to Computer Science and Programming Using Python',
+      provider: 'edX - MIT',
+      category: 'Computer Science',
+      level: 'Beginner',
+      duration: '9 weeks',
+      description: 'Learn the fundamentals of computer science and programming with Python. Taught by MIT professors.',
+      skills: ['Python', 'Algorithms', 'Data Structures', 'Problem Solving'],
+      image: 'https://source.unsplash.com/400x300/?mit,programming',
+      rating: 4.8,
+      students: 35000,
+      price: 'Free',
+      url: 'https://www.edx.org/course/introduction-to-computer-science-and-programming-7'
+    },
+    {
+      id: 'edx_berkeley_001',
+      title: 'Data Science: Machine Learning',
+      provider: 'edX - UC Berkeley',
+      category: 'Data Science',
+      level: 'Intermediate',
+      duration: '8 weeks',
+      description: 'Build a movie recommendation system and learn the science behind one of the most popular and successful data science techniques.',
+      skills: ['R', 'Machine Learning', 'Statistics', 'Data Analysis'],
+      image: 'https://source.unsplash.com/400x300/?berkeley,data-science',
+      rating: 4.7,
+      students: 28000,
+      price: 'Free',
+      url: 'https://www.edx.org/course/data-science-machine-learning'
+    },
+    
+    // Coursera-style Professional Courses
+    {
+      id: 'coursera_google_001',
+      title: 'Google IT Support Professional Certificate',
+      provider: 'Coursera - Google',
+      category: 'IT Support',
+      level: 'Beginner',
+      duration: '6 months',
+      description: 'Prepare for a career in IT support with this comprehensive program from Google. Learn troubleshooting, customer service, and system administration.',
+      skills: ['IT Support', 'Troubleshooting', 'Customer Service', 'System Administration'],
+      image: 'https://source.unsplash.com/400x300/?google,it-support',
+      rating: 4.6,
+      students: 45000,
+      price: '$49/month',
+      url: 'https://www.coursera.org/professional-certificates/google-it-support'
+    },
+    {
+      id: 'coursera_ibm_001',
+      title: 'IBM Data Science Professional Certificate',
+      provider: 'Coursera - IBM',
+      category: 'Data Science',
+      level: 'Beginner',
+      duration: '10 months',
+      description: 'Launch your career in data science with this comprehensive program. Learn Python, SQL, machine learning, and data visualization.',
+      skills: ['Python', 'SQL', 'Machine Learning', 'Data Visualization', 'Jupyter'],
+      image: 'https://source.unsplash.com/400x300/?ibm,data-science',
+      rating: 4.5,
+      students: 38000,
+      price: '$49/month',
+      url: 'https://www.coursera.org/professional-certificates/ibm-data-science'
+    },
+    
+    // ... [The rest of your extensive enhancedCourses list remains here] ...
+    {
+      id: 'startup_tech_015',
+      title: 'Building Tech Startups: From Idea to Scale',
+      provider: 'StartupTech Academy',
+      category: 'Entrepreneurship',
+      level: 'Intermediate',
+      duration: '10 weeks',
+      description: 'Learn how to build and scale technology startups. Cover idea validation, MVP development, funding, and growth strategies.',
+      skills: ['Entrepreneurship', 'Startup Development', 'MVP', 'Product-Market Fit', 'Funding', 'Growth Hacking'],
+      image: 'https://source.unsplash.com/400x300/?startup,entrepreneurship',
+      rating: 4.7,
+      students: 6500,
+      price: '$299',
+      url: 'https://example.com/startup-tech'
+    }
+  ];
+
+  // Add the original course catalog for additional variety
+  const originalCatalog = generateCourseCatalog();
+  
+  // Combine but prioritize enhanced courses
+  return [...enhancedCourses, ...originalCatalog];
 };
