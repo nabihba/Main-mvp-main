@@ -203,6 +203,13 @@ export const getDetailedAiAnalysis = async (item, userData, type = 'course') => 
     - Score 30-44: Low match, minimal relevance
     - Score 0-29: Poor match, not recommended for this user
     
+    BE STRICT WITH SCORING - If a ${type} is not relevant to the user's profile, give it a low score!
+    For example:
+    - Food course for software engineer = 5-15%
+    - Art course for business student = 10-20%
+    - Advanced ML course for beginner = 20-30%
+    - Perfect career match = 85-95%
+    
     Calculate the score based on:
     1. How well it matches their career goal and dream job (40% weight)
     2. Alignment with their field experience and desired fields (30% weight)

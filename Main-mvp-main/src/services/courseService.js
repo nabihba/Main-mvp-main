@@ -39,7 +39,13 @@ const fetchCourseraCourses = async (searchKeywords, maxResults = 15) => {
  */
 const fetchClassCentralCourses = async (searchKeywords, maxResults = 15) => {
   try {
-    // Using ClassCentral's free API for course discovery
+    // ClassCentral API might not be publicly available
+    // For now, we'll skip this and rely on generated courses
+    console.log('ClassCentral API integration temporarily disabled');
+    return [];
+    
+    // TODO: Implement when we have proper API access
+    /*
     const encodedQuery = encodeURIComponent(searchKeywords);
     const response = await fetch(
       `https://www.classcentral.com/api/courses?q=${encodedQuery}&limit=${maxResults}`,
@@ -72,6 +78,7 @@ const fetchClassCentralCourses = async (searchKeywords, maxResults = 15) => {
       rating: course.rating,
       source: 'ClassCentral'
     }));
+    */
   } catch (error) {
     console.error('ClassCentral API error:', error);
     return [];
@@ -93,10 +100,30 @@ const generateRelevantCourses = (searchKeywords, maxResults = 20) => {
   
   // If we found relevant courses, return them
   if (relevantCourses.length > 0) {
+    console.log(`Found ${relevantCourses.length} relevant courses for "${searchKeywords}"`);
     return relevantCourses.slice(0, maxResults);
   }
   
-  // Fallback to general courses
+  // If no relevant courses found, try with individual keywords
+  const keywords = searchKeywords.split(' ').filter(word => word.length > 2);
+  if (keywords.length > 1) {
+    for (const keyword of keywords) {
+      const keywordCourses = searchCourses(keyword);
+      if (keywordCourses.length > 0) {
+        console.log(`Found courses for keyword "${keyword}"`);
+        return keywordCourses.slice(0, maxResults);
+      }
+    }
+  }
+  
+  // Last resort: return general tech/business courses instead of random ones
+  const generalTechCourses = searchCourses('programming technology business management');
+  if (generalTechCourses.length > 0) {
+    console.log('Using general technology/business courses as fallback');
+    return generalTechCourses.slice(0, maxResults);
+  }
+  
+  // Absolute fallback
   return generateCourseCatalog().slice(0, maxResults);
 };
 
