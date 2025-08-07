@@ -197,7 +197,7 @@ const CareerPlanScreen = ({ navigation, onScreenChange }) => {
               <View 
                 style={[
                   styles.progressBar, 
-                  { width: `${getProgressPercentage(careerPlan.progress.coursesCompleted.current, careerPlan.progress.coursesCompleted.total)}%`, backgroundColor: '#10B981' }
+                  { width: `${getProgressPercentage(careerPlan.progress.coursesCompleted.current, careerPlan.progress.coursesCompleted.total)}%`, backgroundColor: '#7886' }
                 ]}
               />
             </View>
@@ -215,7 +215,7 @@ const CareerPlanScreen = ({ navigation, onScreenChange }) => {
               <View 
                 style={[
                   styles.progressBar, 
-                  { width: `${getProgressPercentage(careerPlan.progress.jobsApplied.current, careerPlan.progress.jobsApplied.total)}%`, backgroundColor: '#F59E0B' }
+                  { width: `${getProgressPercentage(careerPlan.progress.jobsApplied.current, careerPlan.progress.jobsApplied.total)}%`, backgroundColor: '#4b6559' }
                 ]}
               />
             </View>
@@ -223,7 +223,7 @@ const CareerPlanScreen = ({ navigation, onScreenChange }) => {
 
           <View style={styles.progressItem}>
             <View style={styles.progressHeader}>
-              <Ionicons name="ribbon-outline" size={20} color="#7e7e7e" />
+              <Ionicons name="ribbon-outline" size={20} color="#C59759" />
               <Text style={[styles.progressLabel, textStyle]}>Skills Acquired</Text>
               <Text style={[styles.progressFraction, titleStyle]}>
                 {careerPlan.progress.skillsAcquired.current}/{careerPlan.progress.skillsAcquired.total}
@@ -233,7 +233,7 @@ const CareerPlanScreen = ({ navigation, onScreenChange }) => {
               <View 
                 style={[
                   styles.progressBar, 
-                  { width: `${getProgressPercentage(careerPlan.progress.skillsAcquired.current, careerPlan.progress.skillsAcquired.total)}%`, backgroundColor: '#8B5CF6' }
+                  { width: `${getProgressPercentage(careerPlan.progress.skillsAcquired.current, careerPlan.progress.skillsAcquired.total)}%`, backgroundColor: '#C59759' }
                 ]}
               />
             </View>
@@ -241,7 +241,7 @@ const CareerPlanScreen = ({ navigation, onScreenChange }) => {
 
           <View style={styles.progressItem}>
             <View style={styles.progressHeader}>
-              <Ionicons name="chatbubble-outline" size={20} color="#C59759" />
+              <Ionicons name="chatbubble-outline" size={20} color="#7e7e7e" />
               <Text style={[styles.progressLabel, textStyle]}>Interview Prep</Text>
               <Text style={[styles.progressFraction, titleStyle]}>
                 {careerPlan.progress.interviewPrep.current}/{careerPlan.progress.interviewPrep.total}
@@ -251,7 +251,7 @@ const CareerPlanScreen = ({ navigation, onScreenChange }) => {
               <View 
                 style={[
                   styles.progressBar, 
-                  { width: `${getProgressPercentage(careerPlan.progress.interviewPrep.current, careerPlan.progress.interviewPrep.total)}%`, backgroundColor: '#EF4444' }
+                  { width: `${getProgressPercentage(careerPlan.progress.interviewPrep.current, careerPlan.progress.interviewPrep.total)}%`, backgroundColor: '#7e7e7e' }
                 ]}
               />
             </View>

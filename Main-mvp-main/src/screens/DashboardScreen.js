@@ -570,7 +570,6 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
               {filteredCourses.length > 0 ? (
                 filteredCourses.map((course) => (
                   <TouchableOpacity key={course.id} style={[styles.courseCard, cardStyle]} onPress={() => handleCoursePress(course)}>
-                    <Image source={{ uri: course.image }} style={styles.courseImage} />
                     <View style={styles.courseCategoryTag}>
                       <Text style={styles.courseCategoryText}>{course.level || 'General'}</Text>
                     </View>
@@ -786,8 +785,7 @@ const styles = StyleSheet.create({
   jobDescription: { fontSize: 14, color: '#4b5563', lineHeight: 20, marginBottom: 16 },
   viewDetailsButton: { backgroundColor: '#065f46', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12 },
   viewDetailsText: { color: '#ffffff', fontSize: 16, fontWeight: '600', marginRight: 8 },
-  courseCard: { backgroundColor: '#ffffff', borderRadius: 16, overflow: 'hidden', marginBottom: 16, shadowColor: '#000000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
-  courseImage: { height: 180 },
+  courseCard: { backgroundColor: '#ffffff', borderRadius: 16, padding: 20, marginBottom: 16, shadowColor: '#000000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
   courseCategoryTag: { backgroundColor: '#fef3c7', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, margin: 20, marginBottom: 12 },
   courseCategoryText: { color: '#92400e', fontSize: 12, fontWeight: '600' },
   courseTitle: { fontSize: 20, fontWeight: '700', color: '#065f46', marginHorizontal: 20, marginBottom: 4 },
