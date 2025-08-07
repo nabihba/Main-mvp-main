@@ -323,7 +323,6 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
   
   const handleProfilePress = () => { setShowSidebar(false); if (onScreenChange) onScreenChange('Profile'); };
   const handleCareerPlanPress = () => { setShowSidebar(false); setShowCareerPlan(true); };
-  const handleCalendarPress = () => { setShowSidebar(false); if (onScreenChange) onScreenChange('Calendar'); };
   const handleSettingsPress = () => { setShowSidebar(false); if (onScreenChange) onScreenChange('Settings'); };
   const handleLogout = () => {
     setShowSidebar(false);
@@ -369,11 +368,7 @@ const HomepageScreen = ({ navigation, onScreenChange }) => {
               <Ionicons name="rocket-outline" size={20} color="#6B7280" />
               <Text style={[styles.menuText, textStyle]}>{t('Career Plan')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem} onPress={handleCalendarPress}>
-              <Ionicons name="calendar-outline" size={20} color="#6B7280" />
-              <Text style={[styles.menuText, textStyle]}>{t('Calendar')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem} onPress={handleSettingsPress}>
+              <TouchableOpacity style={styles.menuItem} onPress={handleSettingsPress}>
               <Ionicons name="settings-outline" size={20} color="#6B7280" />
               <Text style={[styles.menuText, textStyle]}>{t('Settings')}</Text>
             </TouchableOpacity>

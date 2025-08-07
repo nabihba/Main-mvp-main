@@ -3,7 +3,6 @@ import { View, StyleSheet } from 'react-native';
 import DashboardScreen from './DashboardScreen';
 import ProfileScreen from './ProfileScreen';
 import SettingsScreen from './SettingsScreen';
-
 import CareerPlanScreen from './CareerPlanScreen';
 
 const MainScreen = ({ navigation }) => {
@@ -15,8 +14,6 @@ const MainScreen = ({ navigation }) => {
         return <DashboardScreen navigation={navigation} onScreenChange={setCurrentScreen} />;
       case 'Profile':
         return <ProfileScreen navigation={navigation} onScreenChange={setCurrentScreen} />;
-      case 'Calendar':
-        return <CalendarScreen navigation={navigation} onScreenChange={setCurrentScreen} />;
       case 'Settings':
         return <SettingsScreen navigation={navigation} onScreenChange={setCurrentScreen} />;
       default:
