@@ -31,11 +31,12 @@ export const uploadFile = async (file, userId) => {
     const appwriteFile = new File([blob], file.name);
 
     // Upload the file to the Appwrite storage bucket
+    // Use 'any' permission to make the file publicly accessible
     const result = await storage.createFile(
       APPWRITE_BUCKET_ID,
       ID.unique(), // Give the file a unique ID
       appwriteFile,
-      [`read("user:${userId}")`] // IMPORTANT: Secure permission - only the user can read it
+      ['any'] // Make file publicly accessible
     );
 
     // Get the public URL for the file we just uploaded
