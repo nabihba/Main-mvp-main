@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   inputIcon: { marginRight: 12 },
   input: { flex: 1, fontSize: 16, color: '#1F2937', fontWeight: '400' },
   eyeIcon: { padding: 4 },
-  createButton: { backgroundColor: '#1F2937', borderRadius: 12, paddingVertical: 16, marginTop: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
+  createButton: { backgroundColor: '#11523d', borderRadius: 12, paddingVertical: 16, marginTop: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
   createButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600', textAlign: 'center' },
 });
 
